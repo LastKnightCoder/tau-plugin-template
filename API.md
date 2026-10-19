@@ -2,6 +2,10 @@
 
 本文介绍编写命令、页面、侧边栏、设置、数据存储、网络请求和摘录所需的接口。插件接口从 `@tau/plugins` 导入，界面组件从 `@tau/ui` 导入。所述能力需要 Tau 0.59.0 或更高版本。
 
+本文对应 SDK 0.23.1；最低客户端版本只负责版本门槛，使用新领域接口时仍需包含对应实现的客户端构建。SDK 升级步骤见 [DEVELOPMENT.md](DEVELOPMENT.md#升级-sdk-与同步旧模板)。
+
+博客发布提供方见 [PUBLISH.md](PUBLISH.md)，需要 SDK 0.21.0 和包含该能力的客户端；独立博客站点读取数据见 [PUBLISH-DATA.md](PUBLISH-DATA.md)。
+
 想在文档里添加自定义块，见 [EDITOR.md](EDITOR.md)；需要编译 Tailwind、Typst、Markdown 等内容，见 [SERVICES.md](SERVICES.md)。
 
 AI 功能声明、用户模型分配、流式对话、取消与统一用量审计见 [AI.md](AI.md)（SDK 0.7.0 及以上）。
@@ -13,6 +17,10 @@ AI 功能声明、用户模型分配、流式对话、取消与统一用量审�
 资源上传提供方见 [UPLOAD.md](UPLOAD.md)，需要 SDK 0.12.0 和包含上传插件能力的客户端。图片和附件上传与数据库同步使用不同接口。
 
 语音合成和音色复刻见 [TTS.md](TTS.md)，需要 SDK 0.13.0。账号配置按实例隔离；需要上传参考音频时使用 `context.upload.uploadRemote`，支持取消。
+
+图片生成与编辑见 [IMAGES.md](IMAGES.md)，需要 SDK 0.18.0。通过 `context.images` 注册提供方，配置组件以 `target: "images"` 挂载到图片生成设置。
+
+视频提供方（视频网站、自建服务器等）见 [VIDEO.md](VIDEO.md)，需要 SDK 0.22.0。通过 `context.video` 注册，插件返回播放源描述，下载、缓存与播放由客户端完成；配置组件以 `target: "video"` 挂载到账号与连接设置；每个插件在各添加入口中各占一项。
 
 向应用 AI 提供本地工具或外部 MCP 服务器见 [MCP.md](MCP.md)，需要 SDK 0.11.0 和包含此能力的客户端。
 
@@ -35,6 +43,10 @@ AI 功能声明、用户模型分配、流式对话、取消与统一用量审�
 | `platform`      | `desktop`          | 运行平台，保留模板值                                                   |
 | `format`        | `cjs`              | 产物格式，保留模板值                                                   |
 | `main`          | `main.js`          | 构建入口，保留模板值                                                   |
+| `categories`    | `["page"]`         | 插件中心分类，可多选                                                   |
+| `keywords`      | `["计数", "打卡"]` | 搜索关键词，最多 5 个，每个不超过 20 字                                |
+
+分类值为 `page`、`editor`、`whiteboard`、`sync`、`upload`、`voice`、`ai`、`video`、`blog-publish`、`blog-template`。仅提供命令或普通设置时可以省略；分类不授予权限。声明静态编辑器、白板扩展时分别设置 `editor: true`、`whiteboard: true`，详见对应文档。
 
 `styles` 和 `integrity` 由构建生成，不必手写。修改源文件后重新运行 `pnpm build`，不要直接编辑 ZIP 内文件。
 
@@ -84,23 +96,31 @@ export default definePlugin({
 
 `activate` 以及页面、设置组件都会收到 `PluginContext`。
 
-| 属性          | 类型                                   | 用途                                      |
-| ------------- | -------------------------------------- | ----------------------------------------- |
-| `pluginId`    | `string`                               | 当前插件标识                              |
-| `workspaceId` | `string`                               | 当前工作区标识；不要解析它的内部格式      |
-| `signal`      | `AbortSignal`                          | 本次运行结束时中止，可用于停止异步工作    |
-| `commands`    | `PluginContext["commands"]`            | 注册命令                                  |
-| `storage`     | `PluginStorage`                        | 保存当前插件在当前工作区的数据            |
-| `pages`       | `PluginPages`                          | 注册并打开页面                            |
-| `settings`    | `PluginSettings`                       | 注册并打开设置区域                        |
-| `sidebar`     | `PluginSidebar`                        | 创建侧边栏分组、注册页面入口              |
-| `fetch`       | `typeof fetch`                         | 发起与插件生命周期关联的网络请求          |
-| `services`    | `PluginServices`                       | 编译与转换服务，见 SERVICES.md            |
-| `ai`          | `PluginAI`                             | 使用用户分配的模型，见 AI.md              |
-| `mcp`         | `PluginMCP`                            | 注册 MCP，本地工具或外部服务器，见 MCP.md |
-| `excerpts`    | `PluginExcerpts`                       | 把外部划线、标注写为 Tau 摘录             |
-| `materials`   | `PluginMaterials`                      | 获取「转为卡片」等材料动作                |
-| `register`    | `(resource: Disposable) => Disposable` | 托管需要清理的资源                        |
+| 属性          | 类型                                   | 用途                                             |
+| ------------- | -------------------------------------- | ------------------------------------------------ |
+| `pluginId`    | `string`                               | 当前插件标识                                     |
+| `workspaceId` | `string`                               | 当前工作区标识；不要解析它的内部格式             |
+| `signal`      | `AbortSignal`                          | 本次运行结束时中止，可用于停止异步工作           |
+| `commands`    | `PluginContext["commands"]`            | 注册命令                                         |
+| `storage`     | `PluginStorage`                        | 保存当前插件在当前工作区的数据                   |
+| `pages`       | `PluginPages`                          | 注册并打开页面                                   |
+| `settings`    | `PluginSettings`                       | 注册并打开设置区域                               |
+| `editor`      | `PluginEditor`                         | 开发台编辑器贡献；正文使用静态扩展，见 EDITOR.md |
+| `sync`        | `PluginSync`                           | 注册同步存储提供方，见 SYNC.md                   |
+| `upload`      | `PluginUpload`                         | 资源上传与上传提供方，见 UPLOAD.md               |
+| `tts`         | `PluginTTS`                            | 语音合成与音色复刻提供方，见 TTS.md              |
+| `images`      | `PluginImages`                         | 图片生成与编辑提供方，见 IMAGES.md               |
+| `video`       | `PluginVideo`                          | 视频来源与播放源提供方，见 VIDEO.md              |
+| `publish`     | `PluginPublish`                        | 博客发布提供方，见 PUBLISH.md                    |
+| `sidebar`     | `PluginSidebar`                        | 创建侧边栏分组、注册页面入口                     |
+| `fetch`       | `typeof fetch`                         | 发起与插件生命周期关联的网络请求                 |
+| `services`    | `PluginServices`                       | 编译与转换服务，见 SERVICES.md                   |
+| `ai`          | `PluginAI`                             | 使用用户分配的模型，见 AI.md                     |
+| `mcp`         | `PluginMCP`                            | 注册 MCP，本地工具或外部服务器，见 MCP.md        |
+| `chat`        | `PluginChat`                           | 注册 MCP 工具结果渲染器，见 MCP.md               |
+| `excerpts`    | `PluginExcerpts`                       | 把外部划线、标注写为 Tau 摘录                    |
+| `materials`   | `PluginMaterials`                      | 获取「转为卡片」等材料动作                       |
+| `register`    | `(resource: Disposable) => Disposable` | 托管需要清理的资源                               |
 
 不要缓存上下文供下次启用使用。旧上下文失效后调用 storage、注册功能或打开页面会报错。
 
@@ -299,6 +319,19 @@ export function WaterDropIcon({ size = 24, strokeWidth = 2, ...props }: PluginSi
 
 返回的句柄提供 `id`、`open(): Promise<void>` 和 `dispose()`。设置值不会自动保存，组件必须通过 storage 读写。
 
+提供方配置分区声明 `target`，使用宿主注入配置中的 `save` 保存当前提供方或账号，不使用上述普通设置的 storage 流程。配置属性是可选的，组件使用前先检查。配置界面在对应业务设置内挂载，`open()` 跳转到该入口。
+
+| `target`  | 配置属性                                    | 保存方法               |
+| --------- | ------------------------------------------- | ---------------------- |
+| `sync`    | `syncConfig`                                | `save(value)`          |
+| `upload`  | `uploadConfig`                              | `save(value)`          |
+| `tts`     | `ttsConfig`（含 `instanceId`、`models`）    | `save(value, models)`  |
+| `images`  | `imageConfig`（含 `instanceId`、`modelId`） | `save(value, modelId)` |
+| `video`   | `videoConfig`                               | `save(value)`          |
+| `publish` | `publishConfig`                             | `save(value)`          |
+
+各配置都提供 `value: JsonValue`，读取后校验结构；保存失败保留草稿，成功后再提示。TTS 和图片按账号实例隔离，其他分区按对应提供方保存。完整示例与业务约束见各领域文档。
+
 模板中的 `Settings` 组件可以直接复用；以下片段放在同一入口的 `activate` 内：
 
 ```ts
@@ -341,7 +374,7 @@ context.commands.register({
 });
 ```
 
-将示例地址替换成自己的服务。HTTP 4xx/5xx 不会自动抛出异常，需检查 `response.ok`。请求仍受运行环境的网络与跨域规则影响，不保证任意地址均可访问。不要把私密令牌写进源码；请求结果进入存储前也要校验数据。
+将示例地址替换成自己的服务。HTTP 4xx/5xx 不会自动抛出异常，需检查 `response.ok`。请求在宿主执行，不自动继承浏览器页面的 Cookie 或 CORS 行为，认证由插件通过标准请求头提供，不保证任意地址均可访问。不要把私密令牌写进源码；请求结果进入存储前也要校验数据。
 
 ## 摘录
 
