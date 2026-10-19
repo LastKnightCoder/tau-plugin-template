@@ -23,6 +23,8 @@ pnpm install:local
 ## 改成自己的插件
 
 1. 修改 `manifest.json` 的 `id`、`name`、`version`、`description`。`id` 用你自己的唯一名称，例如 `yourname.counter`。
+   - `categories` 决定插件在插件中心出现在哪些分类下，可多选，也可不填：`sync` 同步、`upload` 资源上传、`editor` 编辑器、`whiteboard` 白板、`blog-template` 博客模板、`ai` AI（Skill、MCP、聊天工具渲染、AI 功能、图片）、`voice` 语音、`page` 页面（页面与侧边栏入口）。只提供命令或设置的插件可以不填。
+   - `keywords` 最多 5 个、每个不超过 20 字，只用于插件中心搜索，例如 S3 插件可写 `MinIO`、`R2`。
 2. 修改 `package.json` 的项目名称和版本。
 3. 在 `src/index.tsx` 中实现功能，在 `src/styles.css` 中编写样式。
 4. 把 `README.md` 改成给用户看的介绍和使用步骤；需要版本记录时再加 `CHANGELOG.md`。
@@ -80,7 +82,14 @@ tag 支持 `v1.1.0` 或 `1.1.0`，必须与两个文件的版本一致，否则�
 
 无需配置额外密钥，工作流使用仓库自带的 GITHUB_TOKEN。仓库需启用 Actions，并允许工作流申请 contents:write 权限。发布结果和失败日志在 Actions 页面查看；修复临时错误后可重新运行失败任务，已有 Release 会更新同名 ZIP。代码修复应提高版本并发布新 tag，不移动已发布的版本 tag。
 
-从旧模板创建的仓库不会自动获得新文件，需要同步该 workflow。此流程发布 GitHub Release，不会自动提交插件中心审核或发布 npm 包。
+Release 发布后，工作流会把同一个 ZIP 提交到插件中心：用 GitHub Actions 的短期身份令牌证明发布来自哪个仓库，不需要配置任何密钥。
+
+- **首次发布**仍需在 [插件中心](https://plugins.taunote.app) 网页上传并提交一次，用来把插件 ID 绑定到你的仓库。未绑定时这一步只给出提醒，不让工作流失败。
+- **之后每次推送 tag**，新版本自动进入审核队列，不用再打开网页；插件 ID 只接受来自已绑定仓库的提交，fork 无法冒充。
+- 预发布版本（如 `v1.1.0-beta.1`）只发 GitHub Release，不提交插件中心。
+- 同一 tag 重跑是安全的；同一版本号换了内容会被拒绝，需要提高版本号。
+
+从旧模板创建的仓库不会自动获得新文件，需要同步该 workflow（包括 `id-token: write` 权限）。此流程不发布 npm 包。
 
 ## 常用命令
 
