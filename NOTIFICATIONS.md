@@ -14,11 +14,11 @@ const notification = context.notifications.send({
 await notification.dispose();
 ```
 
-| mode | 行为 |
-| --- | --- |
+| mode           | 行为                                                       |
+| -------------- | ---------------------------------------------------------- |
 | `auto`（默认） | 插件所在窗口聚焦时进入应用内通知栈，失焦时进入独立通知窗口 |
-| `in-app` | 固定进入插件所在窗口的通知栈，不主动聚焦窗口 |
-| `system` | 固定进入 Tau 独立通知窗口，不使用操作系统原生通知 |
+| `in-app`       | 固定进入插件所在窗口的通知栈，不主动聚焦窗口               |
+| `system`       | 固定进入 Tau 独立通知窗口，不使用操作系统原生通知          |
 
 分流发生在发送时；发送后切换窗口焦点不会搬移通知。Web 预览没有独立窗口，沿平台既有规则退化为应用内展示。
 
@@ -31,13 +31,15 @@ context.notifications.send({
   title: "扫描完成",
   body: "点击查看结果。",
   sticky: true,
-  actions: [{
-    label: "查看结果",
-    primary: true,
-    onClick: async () => {
-      await resultsPage.open();
+  actions: [
+    {
+      label: "查看结果",
+      primary: true,
+      onClick: async () => {
+        await resultsPage.open();
+      },
     },
-  }],
+  ],
 });
 ```
 
