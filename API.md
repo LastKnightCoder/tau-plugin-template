@@ -2,11 +2,11 @@
 
 本文介绍编写命令、页面、侧边栏、设置、数据存储、网络请求和摘录所需的接口。插件接口从 `@tau/plugins` 导入，界面组件从 `@tau/ui` 导入。所述能力需要 Tau 0.59.0 或更高版本。
 
-本文对应 SDK 0.23.1；最低客户端版本只负责版本门槛，使用新领域接口时仍需包含对应实现的客户端构建。SDK 升级步骤见 [DEVELOPMENT.md](DEVELOPMENT.md#升级-sdk-与同步旧模板)。
+本文对应 SDK 0.25.0；最低客户端版本只负责版本门槛，使用新领域接口时仍需包含对应实现的客户端构建。SDK 升级步骤见 [DEVELOPMENT.md](DEVELOPMENT.md#升级-sdk-与同步旧模板)。独立后台与双入口构建见 [BACKEND.md](BACKEND.md)。
 
 博客发布提供方见 [PUBLISH.md](PUBLISH.md)，需要 SDK 0.21.0 和包含该能力的客户端；独立博客站点读取数据见 [PUBLISH-DATA.md](PUBLISH-DATA.md)。
 
-想在文档里添加自定义块，见 [EDITOR.md](EDITOR.md)；需要编译 Tailwind、Typst、Markdown 等内容，见 [SERVICES.md](SERVICES.md)。
+想在文档里添加自定义块，见 [EDITOR.md](EDITOR.md)；需要编译 Tailwind、Markdown 等内容，见 [SERVICES.md](SERVICES.md)。
 
 AI 功能声明、用户模型分配、流式对话、取消与统一用量审计见 [AI.md](AI.md)（SDK 0.7.0 及以上）。
 
@@ -26,7 +26,7 @@ AI 功能声明、用户模型分配、流式对话、取消与统一用量审�
 
 聊天工具自定义渲染使用 `await context.chat.registerToolRenderer`，数据与生命周期见 [MCP.md](MCP.md#聊天工具自定义渲染)。类型契约自 SDK 0.15.0 提供，需要包含实现的客户端构建。
 
-阅读顺序：先了解[入口与生命周期](#入口与生命周期)，再按功能查阅[命令](#命令)、[存储](#私有存储)、[页面](#页面)、[设置](#设置)、[网络请求](#网络请求)、[摘录](#摘录)、[材料动作](#材料动作)和[资源清理](#资源清理)。完整可运行示例见 `src/index.tsx`。
+阅读顺序：先了解[入口与生命周期](#入口与生命周期)，再按功能查阅[命令](#命令)、[存储](#私有存储)、[页面](#页面)、[设置](#设置)、[网络请求](#网络请求)、[摘录](#摘录)、[材料动作](#材料动作)、[业务数据](#业务数据)、[关联已有内容](#关联已有内容)和[资源清理](#资源清理)。完整可运行示例见 `src/index.tsx`。
 
 ## manifest
 
@@ -38,13 +38,14 @@ AI 功能声明、用户模型分配、流式对话、取消与统一用量审�
 | `name`          | `我的计数器`       | 插件管理中显示的名称                                                   |
 | `version`       | `1.0.0`            | 插件版本，格式为 `主版本.次版本.修订号`，也可带 `-beta.1` 等预发布后缀 |
 | `minAppVersion` | `0.59.0`           | 所需最低 Tau 客户端版本，不是 SDK 版本；低于要求时不加载               |
-| `formatVersion` | `1`                | 包格式版本，保留模板值                                                 |
+| `formatVersion` | `1` 或 `2`         | 普通渲染插件为 1；声明独立后台时为 2，见 BACKEND.md                    |
 | `apiVersion`    | `1`                | API 协议版本，保留模板值                                               |
 | `platform`      | `desktop`          | 运行平台，保留模板值                                                   |
 | `format`        | `cjs`              | 产物格式，保留模板值                                                   |
 | `main`          | `main.js`          | 构建入口，保留模板值                                                   |
 | `categories`    | `["page"]`         | 插件中心分类，可多选                                                   |
 | `keywords`      | `["计数", "打卡"]` | 搜索关键词，最多 5 个，每个不超过 20 字                                |
+| `permissions`   | `["cards:read"]`   | 可申请的业务数据权限，见[业务数据](#业务数据)；不声明的接口无法调用    |
 
 分类值为 `page`、`editor`、`whiteboard`、`sync`、`upload`、`voice`、`ai`、`video`、`blog-publish`、`blog-template`。仅提供命令或普通设置时可以省略；分类不授予权限。声明静态编辑器、白板扩展时分别设置 `editor: true`、`whiteboard: true`，详见对应文档。
 
@@ -103,6 +104,13 @@ export default definePlugin({
 | `signal`      | `AbortSignal`                          | 本次运行结束时中止，可用于停止异步工作           |
 | `commands`    | `PluginContext["commands"]`            | 注册命令                                         |
 | `storage`     | `PluginStorage`                        | 保存当前插件在当前工作区的数据                   |
+| `permissions` | `PluginPermissions`                    | 查询与申请业务数据权限                           |
+| `data`        | `PluginData`                           | 读取与修改卡片、文章、项目文档、待办和日程       |
+| `content`     | `PluginContent`                        | 读取与修改正文                                   |
+| `events`      | `PluginEvents`                         | 订阅业务数据变化                                 |
+| `app`         | `PluginApp`                            | 选择、打开已有内容，执行导出、演示和共享         |
+| `entities`    | `PluginOwnEntities`                    | 管理插件自有内容、类型和反链                     |
+| `backend`     | `PluginBackendClient`                  | 调用与订阅本机后台，见 BACKEND.md                |
 | `pages`       | `PluginPages`                          | 注册并打开页面                                   |
 | `settings`    | `PluginSettings`                       | 注册并打开设置区域                               |
 | `editor`      | `PluginEditor`                         | 开发台编辑器贡献；正文使用静态扩展，见 EDITOR.md |
@@ -159,7 +167,7 @@ context.commands.register({
 | `storage.set(key, value)` | `Promise<void>`                   | 保存或替换该 key 的值    |
 | `storage.delete(key)`     | `Promise<void>`                   | 删除该 key               |
 
-数据按插件与工作区隔离，停用和重启不会删除。同一个插件在不同工作区读到不同数据；升级时保持插件 ID 不变，并自行处理旧数据结构。
+数据按插件与工作区隔离，保存在当前笔记库里并随云同步，换一台设备也能读到；停用和重启不会删除。同一个插件在不同工作区读到不同数据；升级时保持插件 ID 不变，并自行处理旧数据结构。单个值不超过 1 MB，较大的内容应放进插件内容的正文。
 
 `JsonValue` 支持 `null`、布尔值、字符串、有限数字、这些值组成的数组和普通对象。不能存储 `undefined`、函数、Date、Map、循环引用、NaN 或 Infinity；日期应转换为字符串。
 
@@ -487,6 +495,277 @@ function NoteActions({ context, target }: { context: PluginContext; target: Plug
 - `ref` 来自 `excerpts.items()` 返回的条目，把它原样传回即可，不要自己构造或解析其中的字段。
 - 每个动作有 `id`、`label` 和 `run()`。直接用 `label` 作为按钮文字，不要按 `id` 写死列表：Tau 以后可能增加新的动作。
 - 动作执行后由 Tau 自己给出成功或失败提示，插件不需要再弹提示。
+
+## 业务数据
+
+插件可以读取和修改用户的卡片、文章、项目文档、待办和日程，类型契约自 SDK 0.25.0 提供，需要包含此能力的客户端。
+
+### 声明与授权
+
+先在 manifest 中声明需要的权限，这是插件能申请的上限：
+
+```json
+{ "permissions": ["cards:read", "todos:read"] }
+```
+
+| 权限                                                   | 可调用的接口                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------- |
+| `cards:read` / `articles:read` / `documents:read`      | 对应实体的 `get`、`query`，以及其正文的 `content.read`          |
+| `cards:write` / `articles:write` / `documents:write`   | `create`（项目文档没有）、`update`，以及其正文的 `content.edit` |
+| `cards:delete` / `articles:delete`                     | `delete`                                                        |
+| `todos:read` / `todos:write` / `todos:delete`          | `context.data.todos` 的查询、新建与修改、删除                   |
+| `calendar:read` / `calendar:write` / `calendar:delete` | `context.data.calendar` 的查询、新建与修改、删除                |
+
+插件第一次调用某个接口时，Tau 会弹窗询问用户：「仅这次」在插件停用或应用重启前有效，「始终允许」保存到用户撤销为止，「拒绝」在本次运行内不再询问，连续拒绝 3 次后转为已阻止。应用不在前台时不弹窗，请求会记在插件详情页的「权限」中等待用户处理。用户可以随时在那里撤销。
+
+未声明、被拒绝或无法询问时，接口抛出 `PluginPermissionError`，`reason` 依次为 `undeclared`、`denied` / `blocked`、`unavailable`。建议在页面中处理这个错误，显示说明和重试按钮，而不是在启动时连续申请：
+
+```tsx
+import { PluginPermissionError } from "@tau/plugins";
+
+try {
+  setCards((await context.data.cards.query({ limit: 20 })).items);
+} catch (error) {
+  if (error instanceof PluginPermissionError) setNeedsPermission(true);
+  else throw error;
+}
+```
+
+也可以在用户点击按钮时一次申请多项：`await context.permissions.request(["cards:read", "todos:read"])`，全部获准时返回 `true`。`context.permissions.query(permission)` 返回 `granted`、`prompt` 或 `denied`，不会弹窗。
+
+插件与 Tau 运行在同一环境中，权限约束的是这些接口，不是安全隔离。获准读取的内容可以通过 `context.fetch` 发送出去，用户界面会如实提示这一点；请只读取功能需要的数据。
+
+### 读取实体
+
+```ts
+const weekAgo = Date.now() - 7 * 86_400_000;
+const page = await context.data.cards.query({ updatedAfter: weekAgo, limit: 50 });
+for (const card of page.items) console.log(card.title, card.tags);
+if (page.cursor) await context.data.cards.query({ updatedAfter: weekAgo, cursor: page.cursor });
+
+const article = await context.data.articles.get(id); // 不存在时为 null
+```
+
+`cards`、`articles`、`documents` 都提供 `get(id)` 与 `query(query)`。查询参数：
+
+| 字段                             | 说明                                                        |
+| -------------------------------- | ----------------------------------------------------------- |
+| `createdAfter` / `createdBefore` | 创建时间范围，毫秒时间戳，含起点不含终点                    |
+| `updatedAfter` / `updatedBefore` | 修改时间范围，正文修改也计入                                |
+| `tag`                            | 按标签筛选；层级标签按前缀命中，「读书」也命中「读书/小说」 |
+| `sort`                           | `updated`（默认）或 `created`，均为倒序                     |
+| `limit`                          | 1–200，默认 50                                              |
+| `cursor`                         | 上一页返回的 `cursor`，原样传回读取下一页                   |
+
+返回项都有 `id`、`title`、`tags`、`wordCount`、`createdAt`、`updatedAt`。卡片没有标题字段，`title` 是 AI 标题或正文开头。卡片和文章另有 `pinned` 与 `contentRef`；项目文档有 `kind`（`document` 等）、`projectIds`，非富文本类型的 `contentRef` 为 `null`。`id` 与 `contentRef` 是不透明字符串，只用于传回 Tau，不要解析或自行拼接。
+
+待办与日程：
+
+```ts
+const todos = await context.data.todos.query({ completed: false, limit: 20 });
+const events = await context.data.calendar.query({ start: "2026-10-19", end: "2026-10-26" });
+```
+
+`todos.query` 可按 `source`（`all` / `todo` / `document`）、`completed`、`keyword` 与截止日期 `start` / `end`（`YYYY-MM-DD`）筛选，每页最多 100 条。来自文档勾选项的待办带 `source`，指明所在文档。`calendar.query` 的 `start`、`end` 必填，可以是日期或带时区的 ISO 时间。
+
+### 读取正文
+
+```ts
+const snapshot = await context.content.read(card.contentRef); // 默认 Markdown
+console.log(snapshot?.markdown, snapshot?.wordCount);
+```
+
+需要该正文所属实体的读取权限（例如卡片正文需要 `cards:read`）。`format: "nodes"` 返回编辑器节点 JSON，其结构会随编辑器演进，优先使用 Markdown。读取的是已保存的内容，正在编辑的修改最多晚约 1 秒。
+
+### 修改与删除
+
+```ts
+import { PluginConflictError } from "@tau/plugins";
+
+const card = await context.data.cards.create({ markdown: "# 读书笔记\n\n第一段", tags: ["读书"] });
+try {
+  await context.data.cards.update(card.id, { pinned: true }, { expectedRevision: card.revision });
+} catch (error) {
+  if (error instanceof Error && error.name === "PluginConflictError") {
+    // 用户刚在别处改过这张卡片：重新读取，再决定是否重试
+  } else throw error;
+}
+await context.data.cards.delete(card.id, { expectedRevision: card.revision });
+```
+
+| 接口                            | 可修改的字段                                                                                         |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `cards.create` / `cards.update` | 新建时 `markdown`、`tags`、`pinned`；修改时 `tags`、`pinned`                                         |
+| `articles.create` / `update`    | 新建时 `title`（必填）、`markdown`、`tags`；修改时 `title`、`tags`、`pinned`                         |
+| `documents.update`              | `title`、`tags`；项目文档的新建、移动与删除涉及文档树，暂不开放                                      |
+| `todos.create` / `update`       | `title`、`dueAt`（`YYYY-MM-DD`、带时区的 ISO 时间或 `null`）；`setCompleted(id, completed)` 标记完成 |
+| `calendar.create` / `update`    | `title`、`start`、`end`、`allDay`、`calendarId`；全天日程的 `end` 不含当天                           |
+
+- **revision**：读到的每一项都带 `revision`，修改和删除时作为 `expectedRevision` 传回。期间用户或其他插件改过它，就会抛出 `PluginConflictError`，不会覆盖别人的修改。修改正文不会改变实体的 `revision`。
+- **删除可以恢复**：插件删除的卡片、文章、待办和日程，用户 7 天内可以在插件详情页的「权限 → 最近删除」中恢复。有子待办的待办不能删除。
+- **各处同步**：写入后，打开中的页面、其他窗口、搜索与云同步都会跟着更新，不需要插件通知。
+
+### 修改正文
+
+```ts
+const snapshot = await context.content.read(card.contentRef);
+await context.content.edit(
+  card.contentRef,
+  { op: "append", markdown: "\n今天读完了第三章。" },
+  { expectedRevision: snapshot!.revision }
+);
+```
+
+| `op`          | 作用                                                           |
+| ------------- | -------------------------------------------------------------- |
+| `append`      | 在末尾追加 Markdown，原有内容保持不变                          |
+| `prepend`     | 在开头插入 Markdown，原有内容保持不变                          |
+| `replaceText` | 把 `find` 换成 `markdown`；`find` 必须在当前正文中恰好出现一次 |
+| `replaceAll`  | 用 `markdown` 替换整篇                                         |
+
+需要所属实体的写入权限（卡片正文需要 `cards:write`）。正文正在编辑器中打开时，修改会立即出现在编辑器里，协作者也能看到。插件的修改不进入编辑器的撤销记录，用户无法用撤销键退回，请在修改前确认用户意图。`replaceText` 与 `replaceAll` 会把整篇按 Markdown 重建，Markdown 无法表达的格式可能被简化；只是添加内容时请用 `append` 或 `prepend`。返回新的 `revision`，连续修改时传给下一次调用。
+
+### 变更事件
+
+```ts
+context.events.on(["card.created", "card.updated", "card.deleted"], event => {
+  queryClient.invalidateQueries({ queryKey: ["cards"] });
+});
+```
+
+| 事件                                             | 说明                                                    |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| `card.created` / `card.updated` / `card.deleted` | `id` 与 `context.data.cards` 一致；正文修改也算 updated |
+| `article.*`、`document.*`                        | 同上，文章移入回收站算 deleted                          |
+| `todos.changed`、`calendar.changed`              | 待办、日程有变化，没有 `id`，需要时重新查询             |
+| `workspace.reset`                                | 同步下载替换了整个库，应全量刷新                        |
+
+事件只说明哪一项变了，不携带数据，需要时用 `context.data` 重新读取。`origin` 标出变化来源：`{ kind: "plugin", pluginId }` 表示由插件写入（可用来忽略自己写入引起的事件），其他情况为 `{ kind: "app" }`；待办与日程的事件恒为 `app`。同一项在半秒内的多次变化合并为一次，持续编辑时最多每 2 秒一次。订阅需要在 manifest 中声明对应的读取权限；用户尚未允许时事件不会送达，也不会因此弹窗。`on` 返回的句柄在插件停用时自动注销。
+
+## 关联已有内容
+
+自建页面（画布、看板等）需要引用用户已有的卡片、日记、待办时，用 Tau 的搜索选择窗口让用户挑选，点击时再用 Tau 打开它们。类型契约自 SDK 0.25.0 提供。
+
+```tsx
+import type { PluginEntityRef } from "@tau/plugins";
+
+async function linkExisting() {
+  const picked = await context.app.pick({ kinds: ["card", "diary", "todo"], multiple: true });
+  // picked: [{ ref: { kind: "card", id: "12" }, title: "读书笔记" }, ...]；用户取消时为空数组
+  await context.storage.set("links", picked);
+}
+
+function LinkChip({ link }: { link: { ref: PluginEntityRef; title: string } }) {
+  return <button onClick={() => void context.app.open(link.ref)}>{link.title}</button>;
+}
+```
+
+| `kind`       | 内容             | 打开后                                             |
+| ------------ | ---------------- | -------------------------------------------------- |
+| `card`       | 卡片             | 卡片详情                                           |
+| `article`    | 文章             | 文章详情                                           |
+| `document`   | 项目文档         | 所在项目并选中该文档                               |
+| `diary`      | 日记里的一条记录 | 当天日记并定位到这一条                             |
+| `whiteboard` | 白板             | 白板                                               |
+| `todo`       | 待办             | 待办页并打开详情；文档里的勾选项打开所在文档并定位 |
+| `event`      | 日程             | 日程页并打开详情                                   |
+
+- `pick` 与 `open` 不需要权限：用户亲手挑选，就是同意插件引用这些内容。插件拿到的只有引用和选择时的标题；要读取正文或刷新标题，仍需对应的读取权限（`context.data.*.get`）。
+- 两者都只能在用户操作（点击、按键）之后调用，在定时器或事件回调里调用会抛错。
+- `ref` 是可序列化的普通对象，可以存进插件自己的数据；`id` 与 `context.data` 中同类实体一致。目标被删除后，`open` 抛出「内容不存在」，可以据此提示用户移除这条关联。
+
+## 正文组件
+
+插件页面里可以直接嵌入 Tau 的正文编辑器，效果与卡片详情相同：实时协作、内置与已安装的编辑器扩展、文档待办都会生效，修改自动保存。组件自 SDK 0.25.0 提供，只能在插件页面内使用。
+
+```tsx
+import { ContentEditor, ContentPreview } from "@tau/plugins";
+
+function CardPanel({ card }: { card: PluginCard }) {
+  return <ContentEditor contentRef={card.contentRef} placeholder="写点什么" />;
+}
+
+function CardRow({ card }: { card: PluginCard }) {
+  return <ContentPreview contentRef={card.contentRef} maxBlocks={3} />;
+}
+```
+
+| 组件             | 属性                                             | 所需权限                                   |
+| ---------------- | ------------------------------------------------ | ------------------------------------------ |
+| `ContentEditor`  | `contentRef`、`readonly?`、`placeholder?`、`at?` | 可编辑：所属实体的写入权限；只读：读取权限 |
+| `ContentPreview` | `contentRef`、`maxBlocks?`（默认 3）             | 所属实体的读取权限                         |
+
+- `contentRef` 来自 `context.data` 返回的 `contentRef`，目前支持卡片、文章与项目文档的正文。
+- 组件挂载时只检查授权，不弹窗；尚未决定时显示「允许访问」，用户点击后才询问。已拒绝时提示用户到插件详情页修改。
+- 用户在组件里的编辑与在卡片详情里的编辑相同，产生的事件 `origin` 为 `app`，可以在编辑器的撤销中撤回；这与 `context.content.edit` 不同。
+- `ContentPreview` 显示保存后的内容，编辑中的改动约 1 秒后反映出来。
+- 组件在插件页面内同步渲染，必须与 Tau 在同一运行环境中执行。
+
+## 宿主动作
+
+导出、演示、协作共享这类自带界面的功能，用 `context.app.run` 交给 Tau 完成，界面与卡片详情中的相同。动作自 SDK 0.25.0 提供。
+
+```tsx
+<button
+  onClick={() => void context.app.run("content.export", { ref: card.contentRef, format: "pdf" })}
+>
+  导出 PDF
+</button>
+```
+
+| 动作              | 参数                                                   | 效果                                               |
+| ----------------- | ------------------------------------------------------ | -------------------------------------------------- |
+| `content.export`  | `ref`、`format`：`markdown` / `image` / `pdf` / `epub` | Markdown 直接保存文件，其余打开对应的导出窗口      |
+| `content.present` | `ref`                                                  | 全屏演示                                           |
+| `content.share`   | `ref`                                                  | 打开「内容协作」窗口，由用户确认发起共享或管理成员 |
+
+- `ref` 是 `context.data` 返回的 `contentRef`，目前支持卡片、文章与项目文档的正文。
+- 不需要数据权限：界面和确认都由 Tau 提供，插件拿不到正文。与 `open` 一样，只能在用户操作之后调用；内容已删除时抛出「内容不存在」。
+- 对应界面打开后即返回，不等待用户完成导出或结束演示。同一时间只显示一个，插件停用时自动关闭。
+
+## 插件内容
+
+插件可以创建属于自己的内容（如每周一篇周记、看板上的卡片），每项带一份正文。正文和卡片正文一样实时保存、随云同步，用 `ContentEditor` 编辑，或用 `context.content` 读写。读写自己的内容不需要业务数据权限。接口自 SDK 0.25.0 提供。
+
+```tsx
+import { NotebookPen } from "lucide-react";
+
+context.entities.registerKind({
+  kind: "note",
+  label: "周记",
+  icon: NotebookPen,
+  open: { page: "review", params: note => ({ week: note.key }) },
+});
+
+async function noteOf(week: string) {
+  return (
+    (await context.entities.find("note", week)) ??
+    (await context.entities.create({ kind: "note", key: week, title: `${week} 周记` }))
+  );
+}
+
+function NotePanel({ note }: { note: PluginOwnEntity }) {
+  return <ContentEditor contentRef={note.contentRef} placeholder="这一周想记下什么" />;
+}
+```
+
+| 方法                                                  | 说明                                                                                     |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `registerKind(definition)`                            | 声明内容类型：`kind`、显示名 `label`、图标 `icon`、在 Tau 中打开时进入的页面 `open`      |
+| `create({ kind, key, title?, meta? })`                | 新建一项，正文为空；同一类型下 `key` 已存在时抛出 `PluginConflictError`                  |
+| `get(id)` / `find(kind, key)`                         | 读取一项，不存在时为 `null`                                                              |
+| `query({ kind?, cursor?, limit? })`                   | 按创建时间倒序分页，默认 50 条、最多 200 条                                              |
+| `backlinks(id)`                                       | 哪些卡片、文章、项目文档引用了这项内容：`{ items: [{ ref, title, snippets }], omitted }` |
+| `update(id, { title?, meta? }, { expectedRevision })` | 修改标题或 `meta`（最大 64 KB 的 JSON 对象）                                             |
+| `delete(id, { expectedRevision })`                    | 删除一项及其正文，用户可在 7 天内恢复                                                    |
+
+- 插件内容在 Tau 里以 `label` 与 `icon` 显示：全局搜索、@ 面板、正文中的引用卡片、脉络与漫步都用它们，而不是笼统的「插件内容」。`icon` 与侧边栏图标同一写法（线性单色 SVG 组件，用 `currentColor`），渲染结果必须是单个 `<svg>`、不超过 16 KB；Tau 在声明时渲染一次并随笔记库保存，所以插件停用、卸载后的 7 天内或在其他设备上，这些地方仍显示你声明的类型名与图标。图标只按形状显示，颜色跟随主题，多色、渐变和位图不会保留。不传 `icon` 时显示通用的插件图标。
+- 插件内容会出现在 Tau 的全局搜索与 AI 检索中（标题与正文）。用户点击时 Tau 按 `open` 打开插件页面，`params` 由实体字段算出；命中正文中间某处时页面参数另带 `at`，原样交给 `<ContentEditor at={params.at}>` 即可滚动到命中处。插件停用时，Tau 用自带的只读页显示这项内容。
+- `registerKind` 声明 `mentionable: true` 后，用户可以在正文里用 @ 引用这类内容（默认不可）；引用处点击即打开。`backlinks` 只返回插件已获准读取的类型（`cards:read` 等），不会询问权限，其余来源只计入 `omitted`；`ref` 可直接交给 `context.app.open`。
+- `key` 由插件决定，用来找回同一项内容，例如周记用周次。`meta` 保存少量结构化信息，正文放在正文里。
+- 只有先声明的类型才能新建；`registerKind` 在 `activate` 中调用，停用时自动撤销。
+- `delete` 需要传入读取时的 `revision`，内容已被修改时抛出 `PluginConflictError`。删除后，用户可在插件详情页的「最近删除」中 7 天内恢复，恢复后 ID、`key` 和正文都不变，别处指向它的引用重新生效；若插件在此期间又用同一个 `key` 新建了内容，则无法恢复。删除不触发确认窗口，需要确认时由插件自己询问用户。
+- 卸载插件后，它创建的内容保留 7 天，期间重新安装即可找回，超过 7 天后删除。
 
 ## 资源清理
 
