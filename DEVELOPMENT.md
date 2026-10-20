@@ -89,7 +89,7 @@ pnpm build
 | 0.26.0        | 闪卡创建、读写授权、插件 AI 制卡与 contentRef 来源引用，见 FLASHCARDS.md                               |
 | 0.27.0        | 通用 requestCapability 开放全部内置大模型功能分配，分别以 ai:<能力名> 授权；闪卡复用同一机制，见 AI.md |
 | 0.28.0        | 通知发送、应用内或独立窗口展示、焦点自动分流与生命周期清理，见 NOTIFICATIONS.md                        |
-| 0.29.0        | 页面通过 pageContext.register 提供任意 JSON 上下文，现有 get_current_context 读取，见 API.md              |
+| 0.29.0        | 页面通过 pageContext.register 提供任意 JSON 上下文，现有 get_current_context 读取，见 API.md           |
 
 更早版本的完整变更见已安装包的 `node_modules/@tau/plugins/CHANGELOG.md`。需要本地媒体元数据时自行实现，不能把视频页面解析当作本地文件探测。SDK 根入口、白板/同步契约、UI 和 React 由 Tau 提供，保持模板的 external 配置；普通第三方库由构建打入 ZIP。独立站点数据子入口的用途另见 PUBLISH-DATA.md。
 
