@@ -134,6 +134,7 @@ export default definePlugin({
 | `drag`      | 可选。为 `true` 时显示拖动手柄，用户可以拖动这个块。不声明就不能拖动                      |
 | `isEmpty`   | 可选。判断节点是否为空。内容保存在自定义字段（如源码）里时，用它告诉 Tau 什么情况下算空块 |
 | `behaviors` | 可选。光标在节点内时，接管回车、退格、输入等行为，见[行为](#行为)                         |
+| `resources` | 可选。节点里哪些字段是图片、视频、音频或文件，见[声明资源字段](#声明资源字段)             |
 
 ### 渲染组件
 
@@ -154,13 +155,13 @@ render: ({ attributes, element, children }) => (
 
 ### 修改节点字段
 
-组件里需要修改节点数据（例如保存用户调整后的参数）时，使用 `useSourceBlock` 返回的 `update`：
+组件里需要修改节点数据（例如保存用户调整后的参数）时，使用 `useElement` 返回的 `update`：
 
 ```tsx
-import { useSourceBlock } from "@tau/plugins";
+import { useElement } from "@tau/plugins";
 
 function Counter({ element }: { element: CounterElement }) {
-  const { update } = useSourceBlock(element);
+  const { update } = useElement(element);
   return (
     <button
       onMouseDown={event => event.preventDefault()}
@@ -173,6 +174,78 @@ function Counter({ element }: { element: CounterElement }) {
 ```
 
 `update` 把传入的字段合并进节点，这次修改会进入撤销记录并同步给协作者。
+
+`useElement(element)` 返回：
+
+| 字段                 | 说明                                                               |
+| -------------------- | ------------------------------------------------------------------ |
+| `readOnly`           | 编辑器是否只读。只读时 `update`、`remove` 不会写入                 |
+| `update(properties)` | 把字段合并进节点                                                   |
+| `remove()`           | 删除节点                                                           |
+| `selected`           | 声明了[外框](#块的外框)的块是否被点选                              |
+| `select()`           | 选中外框里的块                                                     |
+| `openMenu(position)` | 在指定位置（视口坐标）打开块菜单，条目与右键、块手柄相同；需要外框 |
+
+请始终传入当前渲染拿到的 `element`。节点被替换或组件卸载后，旧对象上的写入会被忽略，不会改到别的块。
+
+### 块的外框
+
+图表、画廊这类整块由组件渲染的节点（`isVoid: true` 的块），在节点声明上加 `frame` 即可得到 Tau 块的公共交互：点击选中并描边、点到别处取消、右键打开块菜单、选中时 Delete / Backspace 删除块并留下空段落、Esc 取消选中，以及块末尾的「添加段落」。
+
+```tsx
+defineEditorElement({
+  type: "yourname.chart",
+  kind: "block",
+  isVoid: true,
+  frame: { keys: { Enter: "yourname.chart.edit" } },
+  render: Chart,
+});
+```
+
+| 字段              | 说明                                                                |
+| ----------------- | ------------------------------------------------------------------- |
+| `keys`            | 可选。选中时的按键对应的命令 id，命令收到这个节点（同菜单里的命令） |
+| `appendParagraph` | 可选。为 `false` 时不显示末尾的「添加段落」                         |
+
+声明外框后，`render` 只渲染内容：收到的 `attributes` 是空对象、`children` 为空，交给外框处理。组件里用 `useElement(element).selected` 决定是否显示属性条。
+
+### 块的属性条
+
+选中块后浮在块上方的属性条，用 `BlockToolbar`、`BlockToolbarButton`、`BlockToolbarGap` 组成，外观和 Tau 自带的图片块一致。上方放不下时自动翻到下方，点击按钮不会让编辑器失去光标。
+
+```tsx
+import { BlockToolbar, BlockToolbarButton, BlockToolbarGap, useElement } from "@tau/plugins";
+
+function Chart({ element }: { element: ChartElement }) {
+  const { selected, readOnly, update, openMenu } = useElement(element);
+  return (
+    <div className="relative">
+      {selected && !readOnly && (
+        <BlockToolbar label="图表属性">
+          <BlockToolbarButton
+            title="柱状图"
+            active={element.kind === "bar"}
+            icon={<BarChart3 size={15} />}
+            onClick={() => update({ kind: "bar" })}
+          />
+          <BlockToolbarGap />
+          <BlockToolbarButton
+            title="更多"
+            icon={<MoreHorizontal size={15} />}
+            onClick={event => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              openMenu({ x: rect.left, y: rect.bottom + 6 });
+            }}
+          />
+        </BlockToolbar>
+      )}
+      <ChartView data={element.data} />
+    </div>
+  );
+}
+```
+
+`BlockToolbarButton` 的 `title` 是按钮名称（纯图标按钮悬停时显示），`label` 是显示在图标旁的文字，`shortcut` 在提示里显示快捷键，`active` 表示当前选中的选项。
 
 ## 扩展能声明的内容
 
@@ -303,9 +376,21 @@ behaviorsFor: {
 - 模块顶层和渲染组件只使用浏览器能力，不导入 Node.js 模块。
 - 不依赖 `activate` 里才赋值的变量，也不使用 `context`（存储、页面、服务等只在桌面端的插件运行时里存在）。需要编译服务时，用 [`usePluginServices`](services.md#在编辑器块中使用服务)，并处理拿不到服务的情况。
 - JS 和 CSS 自包含：React、`@tau/plugins`、`@tau/ui` 由 Tau 提供，其他依赖会被打进 `main.js`；图片等资源内联。
-- 样式用插件自己的类名前缀，不修改 `body` 或 Tau 自身元素的样式。
+- 样式用插件自己的类名前缀，不修改 `body` 或 Tau 自身元素的样式。用 Tailwind 时同样要加前缀，见[用 Tailwind 时加前缀](ui.md#用-tailwind-时加前缀)；博客模板也是 Tailwind 写的，不加前缀的工具类会让含你的块的页面排版错乱。
 
 博客里的文档是只读的，但组件自身的交互（按钮、缩放图表）照常可用；在只读文档里修改节点字段不会被保存。
+
+在博客里，接口的行为有这些不同：
+
+| 接口                                       | 在博客中                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `useElement`                               | `readOnly` 为 `true`；`selected` 始终为 `false`，按它显示的属性条不会出现 |
+| `MediaImage` / `MediaVideo` / `MediaAudio` | 与博客里 Tau 自带的图片、视频、音频块显示方式相同                         |
+| `useResource`                              | 原样返回节点里的地址                                                      |
+| `useResourceUpload`                        | `undefined`，界面里应隐藏上传入口                                         |
+| `useMediaAppearance`                       | 取用户在发布设置里配置的图片外观                                          |
+| `useMediaViewer`                           | 打开博客里的图片查看器，浏览这篇正文里的全部图片                          |
+| `frame` 外框                               | 只保留显示，不能选中、删除，也没有右键菜单和「添加段落」                  |
 
 ## 停用与卸载
 
@@ -419,6 +504,98 @@ function DiagramBlock({ element, children }: { element: DiagramElement; children
 | `InlineSourceBoundary`                | 渲染在行内节点组件里，处理光标进出节点的边界                  |
 
 行内的源码输入弹层由你用 `@tau/ui` 组件实现。只读时只显示预览，不打开编辑弹层；只读状态下 `update` 和 `remove` 不会写入文档。
+
+## 图片、视频与音频
+
+节点里存的图片、视频、音频地址可能是本地路径、远程地址或共享文档里的资源，不能直接交给 `<img>`。用宿主的媒体组件显示，解析方式与 Tau 自带的图片块相同：本地路径转成可加载的地址，远程资源按用户的缓存设置下载，共享文档里的资源经协作服务解析。
+
+```tsx
+import { MediaImage, useMediaAppearance } from "@tau/plugins";
+
+function Photo({ element }: { element: PhotoElement }) {
+  const appearance = useMediaAppearance();
+  return (
+    <figure contentEditable={false} data-radius={element.borderRadius ?? appearance?.borderRadius}>
+      <MediaImage url={element.url} alt={element.caption} />
+    </figure>
+  );
+}
+```
+
+| 接口                         | 用途                                                                                                                   |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `MediaImage`                 | 显示图片，参数为 `url`、`alt`、`className`、`style`、`loading`、`onLoadError` 等                                       |
+| `MediaVideo` / `MediaAudio`  | 宿主的视频、音频播放器，参数为 `src` 与原生媒体属性                                                                    |
+| `useResource(url, { kind })` | 自己绘制时使用：返回 `src`、`status`（`loading` / `ready` / `error`）与 `retry()`，元素加载失败时调用 `retry` 重新解析 |
+| `useResourceUpload()`        | 返回上传函数，把用户选的文件存进当前的资源存储并返回可写入节点的地址；只读编辑器和博客里为 `undefined`                 |
+| `useMediaAppearance()`       | 用户设置的媒体默认圆角与阴影（`none` / `sm` / `md` / `lg`）；博客里取发布设置。节点自己有设置时以节点为准              |
+
+`kind` 取 `image`、`video`、`audio`、`file`，决定远程资源的缓存方式。上传的文件不需要自己判断本地还是远端存储，也不要把文件内容写进节点。
+
+### 查看图片
+
+`useMediaViewer(element)` 返回一个函数，调用后打开 Tau 的图片查看器，浏览文档里的全部图片，并定位到这个节点的第 `index` 张（按[声明的资源字段](#声明资源字段)计，从 0 开始）。
+
+```tsx
+const openViewer = useMediaViewer(element);
+<MediaImage url={item.url} onDoubleClick={() => openViewer(index)} />;
+```
+
+### 声明资源字段
+
+节点里存了图片、视频、音频或文件地址时，在节点声明上用 `resources` 写明是哪些字段。Tau 只按这份声明找资源：导出打包、共享给协作者时上传本地文件、灯箱里浏览图片、EPUB 取图，都靠它。没有声明的字段按普通文字原样保留，本地图片不会随内容导出，也不会上传给协作者。
+
+```tsx
+defineEditorElement({
+  type: "yourname.gallery",
+  kind: "block",
+  isVoid: true,
+  render: Gallery,
+  resources: [{ path: "images[].url", kind: "image", alt: "desc", caption: "desc" }],
+});
+```
+
+| 字段      | 说明                                                                                     |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `path`    | 资源字段的路径。`url` 是节点上的字段，`images[].url` 表示 `images` 数组每一项的 `url`    |
+| `kind`    | `image`、`video`、`audio` 或 `file`                                                      |
+| `preview` | 可选。同一资源的显示版本（如裁剪结果）所在的字段，与 `path` 末段同层，同样会被导出和上传 |
+| `alt`     | 可选。替代文字所在的字段，与 `path` 末段同层，灯箱里显示                                 |
+| `caption` | 可选。说明文字所在的字段，与 `path` 末段同层，灯箱里显示                                 |
+
+声明会随笔记库保存，插件停用或在没装插件的设备上，这些资源照样能导出和共享。已经有文档用了的字段不要改名；新增资源字段时补进声明即可。
+
+### 完整示例：图册
+
+[图册插件](https://github.com/LastKnightCoder/tau-plugin-image-gallery)把这一篇里的能力组合成了一个完整的媒体块，可以对照它的源码写自己的块：
+
+| 需要                     | 图册的做法                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| 点选、删除、右键菜单     | 节点声明 `frame`，Enter 绑定「编辑图册」命令，空格绑定「全屏预览」                                      |
+| 选中后的属性条           | `useElement(element).selected` 为真时渲染 `BlockToolbar`，切换布局用 `update({ mode })`                 |
+| 显示图片                 | 每张图用 `MediaImage`，圆角与阴影在节点没设置时取 `useMediaAppearance()`                                |
+| 添加图片                 | 编辑弹窗里调用 `useResourceUpload()` 返回的函数，拿到地址写进 `images`；返回 `undefined` 时隐藏上传按钮 |
+| 调整顺序                 | 编辑弹窗里的图片列表用 `@tau/ui` 的 `Sortable`                                                          |
+| 看大图                   | 只读时单击、编辑时双击图片，调用 `useMediaViewer(element)(index)`；编辑时单击留给外框选中               |
+| 导出、协作、灯箱找到图片 | `resources: [{ path: "images[].url", kind: "image", alt: "desc", caption: "desc" }]`                    |
+| Markdown 与 HTML 导出    | `editorCodecs` 每张图导出一行图片链接，`htmlSerializers` 输出静态的横向滚动图片组                       |
+| 样式                     | Tailwind 类名统一加 `ig:` 前缀，见[用 Tailwind 时加前缀](ui.md#用-tailwind-时加前缀)                    |
+
+命令和外框按键只知道节点，打开弹窗却要用组件里的状态。图册的做法是：组件把「打开编辑」「预览」两个函数登记到以节点对象为键的 `WeakMap` 里，命令收到 `context.element` 后从这里取出来调用。节点被替换后旧键自然失效，不会打开别的图册。
+
+```tsx
+// actions.ts
+export const galleryActions = new WeakMap<GalleryElement, { openSettings(): void }>();
+
+// 组件里，登记当前渲染的节点，卸载或换节点时移除
+useEffect(() => {
+  galleryActions.set(element, { openSettings: () => setEditing(element) });
+  return () => void galleryActions.delete(element);
+});
+
+// 命令
+{ id: "yourname.gallery.edit", run: (_editor, { element }) => galleryActions.get(element)?.openSettings() }
+```
 
 ## 动态 Tailwind 样式
 
