@@ -51,7 +51,7 @@ context.settings.register({
 });
 ```
 
-组件从 `uploadConfig.value` 读取配置，用户保存时调用 `await uploadConfig.save(config)`。保存后，Tau 会把你的插件选为当前的上传目标。
+组件从 `uploadConfig.value` 读取配置，用户保存时调用 `await uploadConfig.save(config)`。save 表达保存意图；当前桌面保存并选用，移动保存后由服务页显式选用，作者无需操作宿主设置。
 
 ## 职责划分
 
