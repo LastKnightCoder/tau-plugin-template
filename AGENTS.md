@@ -1,6 +1,6 @@
 # AI 编程助手指引
 
-这是 Tau 的统一插件模板，使用 SDK 0.36.0 与 UI 0.4.0。格式 3 沿用中心上架规则：普通提交人工批准，具审核权限的作者本人经已绑定仓库 CI 发布可自动批准，作者负责平台适配与测试，不要求审核者测试或填写验证记录。移动正式安装要求客户端 0.2.1；桌面 0.59.1 支持格式 3 正式安装与启动装配。先读 docs/api-support.md、docs/portability.md 和 docs/getting-started.md。仅在用户明确要求时发布或上传，不向生产提交一次性测试包，不将格式 3 写入旧正式目录。
+这是 Tau 的统一插件模板，使用 SDK 0.37.0 候选（未发布） 与 UI 0.4.0。格式 3 沿用中心上架规则：普通提交人工批准，具审核权限的作者本人经已绑定仓库 CI 发布可自动批准，作者负责平台适配与测试，不要求审核者测试或填写验证记录。移动正式安装要求客户端 0.2.3；桌面 0.59.1 支持格式 3 正式安装与启动装配。先读 docs/api-support.md、docs/portability.md 和 docs/getting-started.md。仅在用户明确要求时发布或上传，不向生产提交一次性测试包，不将格式 3 写入旧正式目录。
 
 ## 开始之前
 
@@ -16,7 +16,7 @@
 - 通过 `context` 注册的东西会自动清理；自己创建的计时器、监听、连接交给 `context.register`。异步任务响应 `context.signal`，写回界面前检查 `context.signal.aborted`。
 - 桌面网络请求用 `context.fetch` 并检查 `response.ok`；移动尚未注入该适配，不因插件中心可联网就调用它。存储、网络响应、用户配置等外部数据读取后先校验类型。
 - 插件代码运行在浏览器环境，不能导入 Node.js 模块；需要 Node.js 时按 `docs/backend.md` 添加本机后台。
-- 格式 3 使用 pages + navigation，平台/布局/输入从 SDK 环境读取；Node 后台只能显式选择旧桌面格式，不能混入跨端包。
+- 格式 3 使用 pages + navigation，环境只含平台和指针精度，布局使用 CSS；基础 API 不做能力查询；Node 后台只能显式选择旧桌面格式，不能混入跨端包。
 - 编辑器块和白板元素的渲染代码也会在博客中运行，不能依赖 `activate` 或 `context`，见 `docs/editor.md`。
 - 编辑器块里的图片、视频、音频用 `MediaImage` 等宿主组件显示，存地址的字段写进节点的 `resources`，见 `docs/editor.md`。
 - 样式选择器加插件专属前缀；用 Tailwind 时用 `prefix()` 给全部类名加前缀，见 `docs/ui.md`。

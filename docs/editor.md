@@ -10,11 +10,11 @@
 
 ```json
 {
-  "editor": true
+  "editor": { "elements": { "yourname.counter": "edit" } }
 }
 ```
 
-把这一行加进 `manifest.json`。没有它，Tau 不会加载插件里的编辑器扩展。
+把声明加进作者 manifest.json，未单独覆盖的平台继承该等级。构建器生成内部编辑器要求与发行标记；使用标准源码组件时另声明 requires: ["sourceEditor"]。
 
 ### 2. 定义节点和扩展
 

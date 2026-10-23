@@ -4,7 +4,6 @@ import {
   defineEditorElement,
   defineEditorExtension,
   useElement,
-  usePluginEnvironment,
   type EditorElementRenderProps,
 } from "@tau/plugins";
 
@@ -22,10 +21,9 @@ declare module "@tau/plugins" {
 
 function Note({ attributes, element, children }: EditorElementRenderProps<NoteElement>) {
   const access = useElement(element);
-  const environment = usePluginEnvironment();
   return (
     <div {...attributes}>
-      <div contentEditable={false} className={environment.layout === "compact" ? "p-2" : "p-4"}>
+      <div contentEditable={false} className="p-2">
         {access.readOnly ? (
           <p>{element.text}</p>
         ) : (

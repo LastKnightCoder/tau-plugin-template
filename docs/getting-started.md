@@ -1,6 +1,6 @@
 # 快速开始
 
-模板使用同一套 SDK：`@tau/plugins` 为 npm 别名 @xiongtao.xt/tau-plugins 0.36.0，`@tau/ui` 为 @xiongtao.xt/tau-ui 0.4.0。移动正式安装要求 Android/iOS 客户端至少 0.2.1；具体支持范围先看 [API 矩阵](api-support.md)。
+模板使用同一套 SDK：`@tau/plugins` 为 npm 别名 @xiongtao.xt/tau-plugins 0.37.0，`@tau/ui` 为 @xiongtao.xt/tau-ui 0.4.0。移动正式安装要求 Android/iOS 客户端至少 0.2.3；具体支持范围先看 [API 矩阵](api-support.md)。
 
 ## 准备与构建
 
@@ -12,7 +12,7 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-无需仓库源码或本地 tarball。依赖使用固定版本和锁文件；没有单独的移动 SDK。
+SDK 0.37.0 是当前未发布候选；本分支先按下文使用本地 tarball 验证，发布后再使用上述 npm 冻结安装。依赖固定版本，没有单独的移动 SDK。
 
 3. 构建生成 `dist/<插件ID>-<版本>.zip`；再次安装可用 `pnpm install --frozen-lockfile`。
 4. 在目标宿主验证后按发布指南上传待审；格式 3 普通提交人工审核，具审核权限的作者本人通过已绑定仓库 CI 发布可自动批准。移动用户从应用内中心安装，首次安装保存启用意图，重开应用生效；桌面 0.59.1 支持格式 3 中心安装，首次安装后需在已安装页启用并重启。install:local 不把格式 3 写进旧桌面正式目录。
@@ -24,13 +24,13 @@ pnpm build
 | 文件                                | 用途                                        |
 | ----------------------------------- | ------------------------------------------- |
 | manifest.json                       | 身份、平台、版本与能力声明                  |
-| src/index.tsx                       | 共用计数器、页面、功能入口、可选设置/Dialog |
+| src/index.tsx                       | 共用计数器、页面、功能入口、通用设置/Dialog |
 | src/styles.css、src/CounterIcon.tsx | 样式和图标                                  |
 | build.mjs                           | 依赖检查、清单校验、暂存产物与 ZIP          |
 | use-local-sdk.mjs                   | 准备未发布的 SDK/UI 输入                    |
 | README.md                           | 给使用者的说明                              |
 
-计数按工作区保存。跨端页面注册与入口分离；设置与 Dialog 仅在宿主提供能力时使用。布局通过 usePluginEnvironment 订阅，不解析 User-Agent。
+计数按工作区保存。跨端页面注册与入口分离；设置与 Dialog 属于公共基础，直接使用。布局使用 CSS 容器查询；只有特殊交互才读取平台或输入，不解析 User-Agent。
 
 ## 改成自己的插件
 

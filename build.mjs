@@ -16,20 +16,20 @@ import { randomUUID, createHash } from "node:crypto";
 import { isBuiltin } from "node:module";
 
 const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
-const portable = manifest.formatVersion === 3;
+const portable = manifest.targets !== undefined;
 if (!portable && (manifest.profile !== undefined || manifest.targets !== undefined))
   throw new Error("旧桌面格式不能混入跨端 profile/targets 声明");
 if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(manifest.id))
   throw new Error("插件 ID 应为小写字母、数字及点或连字符组成的命名空间");
 if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(manifest.version)) throw new Error("插件版本无效");
 // manifest 不写 main 时构建独立 Skill 包：没有代码入口，只打包 skills/ 目录
-const skillPackage = manifest.main === undefined;
+const skillPackage = !portable && manifest.main === undefined;
 let backend;
 let validateManifest;
 if (portable) {
   if (skillPackage) throw new Error("跨端开发包必须有 JS 入口");
   const api = await import("@tau/plugins/portable");
-  validateManifest = api.validatePortableDistributionManifest;
+  validateManifest = api.buildPortablePluginManifest;
 } else if (skillPackage) {
   if (manifest.backend !== undefined || manifest.formatVersion !== 1)
     throw new Error("Skill 包使用格式 1，不能声明后台");
@@ -126,7 +126,6 @@ try {
     }
   }
   const skills = await collectSkills(staging);
-  if (portable && skills.ids.length) throw new Error("跨端开发配置尚不支持 Skill 包");
   if (skillPackage && !skills.ids.length)
     throw new Error("Skill 包至少需要一个 skills/<id>/SKILL.md");
   const result = skillPackage
@@ -202,11 +201,14 @@ try {
       .update(await readFile(path.join(staging, file)))
       .digest("hex");
   // skills 由 skills/ 目录生成，忽略 manifest 中手写的值
-  const packaged = { ...manifest, integrity, ...(styles ? { styles: "main.css" } : {}) };
+  let packaged = { ...manifest, integrity, ...(styles ? { styles: "main.css" } : {}) };
   delete packaged.skills;
   if (skills.ids.length) packaged.skills = skills.ids;
 
-  if (validateManifest) validateManifest(packaged, { strict: true });
+  if (validateManifest) {
+    if (portable) packaged = validateManifest(manifest, { main: "main.js", integrity, ...(styles ? { styles: "main.css" } : {}), ...(skills.ids.length ? { skills: skills.ids } : {}) });
+    else validateManifest(packaged, { strict: true });
+  }
   await writeFile(path.join(staging, "manifest.json"), JSON.stringify(packaged, null, 2));
   const destination = path.resolve("dist", `${manifest.version}-${buildId}`);
   await rename(staging, destination);

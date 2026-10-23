@@ -1,6 +1,6 @@
 # 插件的组成
 
-默认模板使用跨端开发格式 3，targets/profile 与节点支持声明见[跨端契约](portability.md)。下文旧桌面 manifest 示例属于格式 1/2，不应直接混入格式 3。
+默认模板维护作者清单，构建器生成格式 3 发行清单；平台和节点声明见[跨端契约](portability.md)。作者不手写包格式、入口或摘要。
 
 一个 Tau 插件由以下几部分组成：
 
@@ -17,18 +17,17 @@
 
 ```json
 {
-  "formatVersion": 1,
   "id": "example.external-counter",
   "name": "计数器示例",
   "description": "在侧边栏记录并保存计数。",
   "categories": ["page"],
   "keywords": ["计数", "打卡"],
   "version": "1.0.0",
-  "minAppVersion": "0.59.0",
-  "apiVersion": 1,
-  "platform": "desktop",
-  "format": "cjs",
-  "main": "main.js"
+  "targets": {
+    "desktop": { "minAppVersion": "0.59.2" },
+    "android": { "minAppVersion": "0.2.3" },
+    "ios": { "minAppVersion": "0.2.3" }
+  }
 }
 ```
 
@@ -40,11 +39,11 @@
 | `name`          | 插件名称，显示在插件页和插件中心                                                                          |
 | `description`   | 一句话简介，1 至 160 字                                                                                   |
 | `version`       | 插件版本，格式为 `主版本.次版本.修订号`，可带预发布后缀，如 `1.2.0-beta.1`                                |
-| `minAppVersion` | 需要的最低 Tau 版本，如 `0.59.0`。写完整版本号，不写 `>=`、`^` 之类的范围。客户端版本低于它时不会加载插件 |
+| `targets` | 各平台最低应用版本；填写完整版本号，不写范围。省略平台表示不支持安装 |
 | `categories`    | 插件中心的分类，可多选，也可以不写，见下表                                                                |
 | `keywords`      | 插件中心的搜索词，最多 5 个，每个不超过 20 字。例如 S3 插件可以写 `MinIO`、`R2`                           |
 | `permissions`   | 插件可能申请的用户数据权限，见[用户数据 · 权限](user-data.md#权限)和 [AI](ai.md)                          |
-| `editor`        | 声明了编辑器扩展时写 `true`，见[编辑器扩展](editor.md)                                                    |
+| `editor`        | 作者清单填写 elements 支持等级；发行包的 editor 标记由工具生成，见[跨端契约](portability.md) |
 | `whiteboard`    | 声明了白板扩展时写 `true`，见[白板扩展](whiteboard.md)                                                    |
 | `backend`       | 需要本机后台时填写，同时把 `formatVersion` 改为 `2`，见[本机后台](backend.md)                             |
 
