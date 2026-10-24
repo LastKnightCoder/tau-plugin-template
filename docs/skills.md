@@ -24,7 +24,6 @@ skills/
 ```
 
 - `skills/` 下的每个子目录是一个 Skill，目录名就是 Skill 的 ID，只能使用字母、数字、点、横线和下划线。
-- 一个包最多 32 个 Skill。
 - 目录里的文件会原样打进插件包。以 `.` 开头的文件、`node_modules` 和 `__pycache__` 会被忽略；不能包含符号链接。
 
 ### SKILL.md

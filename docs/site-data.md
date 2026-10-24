@@ -44,7 +44,7 @@ if (item) {
 
 站点的其他配置（描述、副标题、布局开关等）由**博客模板**自己声明：在模板的 manifest 中写 `template.siteFields`，用户在「站点设置 · 博客模板」中填写，发布时以 `site.fields[key]` 交给模板。
 
-- 字段类型有 `text`、`textarea`、`url`、`select`、`switch`，最多 32 个。
+- 字段类型有 `text`、`textarea`、`url`、`select`、`switch`。
 - `fields` 只包含已声明的字段。用户没填时取字段的 `default`；没有默认值时，文本类为空字符串，开关为 `false`，下拉为第一个选项。
 - 首页数据只有时间线和统计，介绍区等由模板根据自己的字段渲染。
 

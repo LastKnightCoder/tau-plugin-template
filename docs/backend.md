@@ -37,7 +37,7 @@
 | `scope`                 | `application`：整个应用一个后台；`workspace`：每个工作区一个后台                                         |
 | `activation`            | 什么时候启动，见下表                                                                                     |
 | `lifetime`              | `idle`：空闲一段时间后停止，有调用时再启动；`persistent`：一直运行到作用域结束，意外退出时自动重启       |
-| `reason`                | 向用户说明后台用来做什么，1 至 500 字。用户授权时会看到它                                                |
+| `reason`                | 向用户说明后台用来做什么，填写非空用途说明，用户授权时会看到它                                           |
 | `systemAccess`          | 后台会用到的系统能力：`filesystem`（文件）、`network`（网络）、`process`（启动程序），用于告知用户和审核 |
 | `tools`                 | 需要启动外部程序时声明，见[调用外部程序](#调用外部程序)                                                  |
 
@@ -135,7 +135,7 @@ const os = await context.backend.call("system.platform", null, { signal });
 | `command` | 程序名或绝对路径                       |
 | `args`    | 可选。固定的前置参数，每次调用都会带上 |
 
-最多声明 32 个工具。然后在后台中调用：
+声明工具后，在后台中调用：
 
 ```ts
 const result = await ctx.process.run("git", ["status", "--short"], { signal: request.signal });
