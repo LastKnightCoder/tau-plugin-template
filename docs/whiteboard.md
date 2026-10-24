@@ -11,7 +11,7 @@
 
 ```json
 {
-  "targets": { "desktop": { "minAppVersion": "0.59.3" } }
+  "targets": { "desktop": { "minAppVersion": "0.59.4" } }
 }
 ```
 
@@ -266,7 +266,6 @@ import { IPluginStorage, defineWhiteboardExtension } from "@tau/plugins/whiteboa
 
 defineWhiteboardExtension({
   id: __PLUGIN_META__.id,
-  requires: [IPluginStorage],
   elements: [/* ... */],
   create: api => {
     const storage = api.getService(IPluginStorage);

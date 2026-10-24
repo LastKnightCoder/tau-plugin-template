@@ -1,6 +1,6 @@
 # 快速开始
 
-模板使用同一套 SDK：`@tau/plugins` 为 npm 别名 @xiongtao.xt/tau-plugins 0.40.0，`@tau/ui` 为 @xiongtao.xt/tau-ui 0.5.0。移动正式安装要求 Android/iOS 客户端至少 0.2.3；具体支持范围先看 [API 矩阵](api-support.md)。
+模板使用同一套 SDK：`@tau/plugins` 为 npm 别名 @xiongtao.xt/tau-plugins 0.40.0，`@tau/ui` 为 @xiongtao.xt/tau-ui 0.5.0。移动正式安装要求 Android/iOS 客户端至少 0.2.4；具体支持范围先看 [API 矩阵](api-support.md)。
 
 ## 准备与构建
 
@@ -12,7 +12,7 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-SDK 0.40.0 已发布到 npm，直接使用上述冻结安装与构建命令，无需本地 tarball。SDK 发布不代表插件或 APP 已发布；客户端要求以清单和支持矩阵为准。
+SDK 0.41.0 已发布到 npm，直接使用上述冻结安装与构建命令，无需本地 tarball。SDK 发布不代表插件或 APP 已发布；客户端要求以清单和支持矩阵为准。
 
 3. 构建生成 `dist/<插件ID>-<版本>.zip`；再次安装可用 `pnpm install --frozen-lockfile`。
 4. 在目标宿主验证后按发布指南上传待审；格式 3 普通提交人工审核，具审核权限的作者本人通过已绑定仓库 CI 发布可自动批准。移动用户从应用内中心安装，首次安装保存启用意图，重开应用生效；桌面 0.59.1 支持格式 3 中心安装，首次安装后需在已安装页启用并重启。install:local 不把格式 3 写进旧桌面正式目录。

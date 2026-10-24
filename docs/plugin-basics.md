@@ -1,6 +1,6 @@
 # 插件的组成
 
-默认模板维护作者清单，构建器生成格式 3 发行清单；平台和节点声明见[跨端契约](portability.md)。作者不手写包格式、入口或摘要。
+默认模板维护作者清单，构建器生成格式 3 发行清单；平台声明与静态注册见[跨端契约](portability.md)。作者不手写包格式、入口或摘要。
 
 一个 Tau 插件由以下几部分组成：
 
@@ -24,34 +24,30 @@
   "keywords": ["计数", "打卡"],
   "version": "1.0.0",
   "targets": {
-    "desktop": { "minAppVersion": "0.59.3" },
-    "android": { "minAppVersion": "0.2.3" },
-    "ios": { "minAppVersion": "0.2.3" }
+    "desktop": { "minAppVersion": "0.59.4" },
+    "android": { "minAppVersion": "0.2.4" },
+    "ios": { "minAppVersion": "0.2.4" }
   }
 }
 ```
 
 ### 需要你填写的字段
 
-| 字段            | 说明                                                                                                      |
-| --------------- | --------------------------------------------------------------------------------------------------------- |
-| `id`            | 插件的唯一标识，由小写字母、数字组成，用点或连字符分段，例如 `yourname.counter`。发布后不要再改           |
-| `name`          | 插件名称，显示在插件页和插件中心                                                                          |
-| `description`   | 一句话简介，1 至 160 字                                                                                   |
-| `version`       | 插件版本，格式为 `主版本.次版本.修订号`，可带预发布后缀，如 `1.2.0-beta.1`                                |
-| `targets` | 各平台最低应用版本；填写完整版本号，不写范围。省略平台表示不支持安装 |
-| `categories`    | 插件中心的分类，可多选，也可以不写，见下表                                                                |
-| `keywords`      | 插件中心的搜索词，最多 5 个，每个不超过 20 字。例如 S3 插件可以写 `MinIO`、`R2`                           |
-| `permissions`   | 插件可能申请的用户数据权限，见[用户数据 · 权限](user-data.md#权限)和 [AI](ai.md)                          |
-| `editor`        | 作者清单填写 elements 支持等级；发行包的 editor 标记由工具生成，见[跨端契约](portability.md) |
-| `whiteboard`    | 声明了白板扩展时写 `true`，见[白板扩展](whiteboard.md)                                                    |
-| `backend`       | 需要本机后台时填写，同时把 `formatVersion` 改为 `2`，见[本机后台](backend.md)                             |
+| 字段          | 说明                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `id`          | 插件的唯一标识，由小写字母、数字组成，用点或连字符分段，例如 `yourname.counter`。发布后不要再改 |
+| `name`        | 插件名称，显示在插件页和插件中心                                                                |
+| `description` | 一句话简介，1 至 160 字                                                                         |
+| `version`     | 插件版本，格式为 `主版本.次版本.修订号`，可带预发布后缀，如 `1.2.0-beta.1`                      |
+| `targets`     | 各平台最低应用版本；填写完整版本号，不写范围。省略平台表示不支持安装                            |
+| `categories`  | 插件中心的分类，可多选，也可以不写，见下表                                                      |
+| `keywords`    | 插件中心的搜索词，最多 5 个，每个不超过 20 字。例如 S3 插件可以写 `MinIO`、`R2`                 |
+| `permissions` | 插件可能申请的用户数据权限，见[用户数据 · 权限](user-data.md#权限)和 [AI](ai.md)                |
+| `backend`     | 需要本机后台时填写，同时把 `formatVersion` 改为 `2`，见[本机后台](backend.md)                   |
 
 | 分类            | 适合的插件                    |
 | --------------- | ----------------------------- |
 | `page`          | 提供页面和侧边栏入口          |
-| `editor`        | 在文档中添加块                |
-| `whiteboard`    | 在白板中添加元素或工具        |
 | `ai`            | MCP 工具、AI 功能、图片生成   |
 | `skill`         | Skill 包，或附带 Skill 的插件 |
 | `sync`          | 同步存储                      |
@@ -65,7 +61,7 @@
 
 ### 保持模板值的字段
 
-`formatVersion`、`apiVersion`、`platform`、`profile`、`format`、`main` 按所选协议保持一致。`styles` 和 `integrity` 由构建生成；skills 仅旧桌面格式支持。不要直接修改 ZIP。
+`formatVersion`、`apiVersion`、`platform`、`profile`、`format`、`main` 按所选协议保持一致。`styles` 和 `integrity` 由构建生成；纯 Markdown Skill 从目录收集。不要直接修改 ZIP。
 
 ## 入口与插件定义
 

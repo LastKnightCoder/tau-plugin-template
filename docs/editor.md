@@ -6,17 +6,9 @@
 
 ## 第一个块：计数器
 
-### 1. 在 manifest 中声明
+正文节点在 editorExtensions 中注册，Markdown 转换在 editorCodecs 中注册。宿主据此装配正文、源码编辑和样式编译；manifest 不重复登记节点、等级或能力。targets 只声明已完整适配的平台及最低客户端版本。
 
-```json
-{
-  "editor": { "elements": { "yourname.counter": "edit" } }
-}
-```
-
-把声明加进作者 manifest.json，未单独覆盖的平台继承该等级。构建器生成内部编辑器要求与发行标记；使用标准源码组件时另声明 requires: ["sourceEditor"]。
-
-### 2. 定义节点和扩展
+### 1. 定义节点和扩展
 
 ```tsx
 import { useState } from "react";
@@ -102,7 +94,7 @@ export default definePlugin({
 });
 ```
 
-### 3. 构建、安装、重启
+### 2. 构建、安装、重启
 
 `pnpm build` 并安装后，**完全退出并重新打开 Tau**。编辑器扩展在启动时装配，启用、停用和更新都要重启才生效。之后在文档里输入 `/计数器`，就能插入这个块。
 
