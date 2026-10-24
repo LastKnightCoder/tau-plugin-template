@@ -2,7 +2,7 @@
 
 # WebSocket
 
-`context.websocket.connect(url, protocols?, options?)` 同步返回标准 `WebSocket` 接口形状的连接。SDK 0.43.0 对应桌面 0.59.5、移动 0.2.6 的宿主实现；这不代表这些版本已发布。插件无需引入 Node.js `ws`，同一代码用于桌面、Android 与 iOS。
+`context.websocket.connect(url, protocols?, options?)` 同步返回标准 `WebSocket` 接口形状的连接。SDK 0.43.0 对应桌面 0.59.5、移动 0.2.7 的宿主实现；这不代表这些版本已发布。插件无需引入 Node.js `ws`，同一代码用于桌面、Android 与 iOS。
 
 ```ts
 const socket = context.websocket.connect("wss://api.example.com/stream", [], {

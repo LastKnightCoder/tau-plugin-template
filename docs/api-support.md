@@ -39,9 +39,9 @@
 
 ## ASR 与 WebSocket
 
-SDK 0.43.0 的 `context.asr`、`context.websocket` 与 `settings target: "asr"` 已接桌面 0.59.5、Android/iOS 0.2.6 宿主源码。移动插件使用同一注册、配置和事件接口，音频由宿主采集，插件不访问麦克风。设备与真实云端账号验收单独记录；Windows 原生识别仍待验证，不影响插件契约。
+SDK 0.43.0 的 `context.asr`、`context.websocket` 与 `settings target: "asr"` 已接桌面 0.59.5、Android/iOS 0.2.7 宿主源码。移动插件使用同一注册、配置和事件接口，音频由宿主采集，插件不访问麦克风。设备与真实云端账号验收单独记录；Windows 原生识别仍待验证，不影响插件契约。
 
-ASR 支持能力探测、可取消的流式会话与可选文件任务；提供方必须真实声明能力，Seed 当前仅流式。WebSocket 的工厂仅扩展鉴权头和 signal，连接保留标准事件、状态、同步 send/close；详见 [WebSocket 契约](websocket.md)。聊天和搜索只在最终结果后写入草稿，AI 整理属于后续阶段。
+ASR 支持能力探测、可取消的流式会话与可选文件任务；提供方必须真实声明能力，Seed 当前仅流式。WebSocket 的工厂仅扩展鉴权头和 signal，连接保留标准事件、状态、同步 send/close；详见 [WebSocket 契约](websocket.md)。聊天和搜索只在最终结果后写入草稿；桌面可选 AI 整理复用现有模型配置，移动暂使用原文。
 
 ## 正文、UI 与交互
 
