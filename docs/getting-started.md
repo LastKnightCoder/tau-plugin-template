@@ -40,3 +40,7 @@ SDK 0.42.0 已发布到 npm，直接使用上述冻结安装与构建命令，�
 4. 更新 README，构建后在目标宿主验收启用、保存、停用与恢复。
 
 契约见[跨端开发](portability.md)，生命周期见[插件组成](plugin-basics.md)。仓库外构建只证明作者闭环，不替代宿主和真机验收。
+
+## 开发尚未发布的 ASR 接口
+
+ASR 与标准 WebSocket 适配需要 SDK 0.43.0、桌面 0.59.5 或移动 0.2.5。默认模板的已发布 SDK 基线继续保持可安装；要验证候选 API，复制模板到仓库外，用 use-local-sdk.mjs 注入宿主生成的 SDK/UI tarball，再安装、类型检查和构建。不要提交这个副本的本机依赖路径或锁文件。正式 SDK 发布后再同步 npm 别名和正式锁文件；本机候选构建不等于发布。接口见 [语音识别](providers/asr.md) 与 [WebSocket](websocket.md)。

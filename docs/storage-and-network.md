@@ -62,3 +62,7 @@ const data: unknown = await response.json();
 - 响应数据先校验再使用，尤其是写入存储之前。
 - 不要把私人的 API Key 写进源码。需要用户自己的凭据时，让用户在设置中填写。
 - 能读到的用户数据都可以通过网络发送出去。只在功能确实需要时这样做，并在 README 里向用户说明。
+
+## WebSocket
+
+实时双向通信使用 `context.websocket.connect(url, protocols?, { headers, signal })`。它同步返回连接，标准事件、状态和 send/close 保持不变，背压由宿主处理。详见 [WebSocket](websocket.md)。ASR 插件的完整接入见 [语音识别](providers/asr.md)。需要 SDK 0.43.0 和对应新版宿主；默认计数器模板保留已发布 SDK 基线，开发未发布接口按快速开始的候选包流程验证。

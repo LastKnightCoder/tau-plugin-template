@@ -31,6 +31,7 @@ Tau 插件用 TypeScript 和 React 编写，打包成一个 ZIP，按声明在�
 | 创建闪卡、打开制卡窗口                                     | [闪卡](flashcards.md)                                     |
 | 编译 Tailwind、转换 Markdown、处理音视频                   | [编译与转换服务](services.md)                             |
 | 运行 Node.js 代码、调用本机程序                            | [本机后台](backend.md)                                    |
+| 接入语音识别 | [语音识别](providers/asr.md) |
 | 接入同步存储、图床、语音、图片生成、视频网站、博客发布目标 | [服务提供方](providers/README.md)                         |
 | 开发独立博客站点，读取 Tau 发布的数据                      | [站点数据](site-data.md)                                  |
 

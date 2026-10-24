@@ -6,6 +6,7 @@ Tau 的一些功能允许用户选择背后的服务：同步到哪个存储、�
 | ---------------------- | ---------------------------------------- | ---------------------------- |
 | [同步存储](sync.md)    | 把笔记库同步到你接入的存储服务           | 设置 · 同步                  |
 | [资源上传](upload.md)  | 把编辑器里的图片、附件上传到你接入的存储 | 设置 · 资源存储              |
+| [语音识别](asr.md) | 将语音转为输入草稿 | 设置 · 语音输入 |
 | [语音合成](tts.md)     | 用你接入的服务朗读、生成播客、复刻音色   | 设置 · 语音                  |
 | [图片生成](images.md)  | 用你接入的模型生成和编辑图片             | 设置 · 图片生成              |
 | [视频来源](video.md)   | 从你接入的视频网站或服务添加视频         | 设置 · 账号与连接 · 在线视频 |
@@ -69,6 +70,7 @@ context.settings.register({
 | --------- | ------------------ | ---------------------- |
 | `sync`    | `syncConfig`       | `save(value)`          |
 | `upload`  | `uploadConfig`     | `save(value)`          |
+| `asr` | `asrConfig` | `save(value, modelId)` |
 | `tts`     | `ttsConfig`        | `save(value, models)`  |
 | `images`  | `imageConfig`      | `save(value, modelId)` |
 | `video`   | `videoConfig`      | `save(value)`          |
@@ -85,7 +87,7 @@ context.settings.register({
 
 ### 3. 网络请求与取消
 
-- 请求统一用 [`context.fetch`](../storage-and-network.md#网络请求)。
+- HTTP 请求使用 `context.fetch`，双向连接使用 `context.websocket`，见[存储与网络](/docs/storage-and-network.md)。
 - 提供方的方法会收到 `signal`，把它传给 `context.fetch`。重试前的等待、轮询也要响应取消。
 - 自己设置超时时，用 `AbortSignal.any([signal, AbortSignal.timeout(ms)])` 组合，不要丢掉 Tau 传入的 `signal`。
 - 取消后不要把 `AbortError` 当成可重试的错误。
