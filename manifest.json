@@ -12,7 +12,7 @@
   "version": "1.2.0",
   "targets": {
     "desktop": {
-      "minAppVersion": "0.59.2"
+      "minAppVersion": "0.59.3"
     },
     "android": {
       "minAppVersion": "0.2.3"

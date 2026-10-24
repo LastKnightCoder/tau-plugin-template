@@ -24,7 +24,7 @@
   "keywords": ["计数", "打卡"],
   "version": "1.0.0",
   "targets": {
-    "desktop": { "minAppVersion": "0.59.2" },
+    "desktop": { "minAppVersion": "0.59.3" },
     "android": { "minAppVersion": "0.2.3" },
     "ios": { "minAppVersion": "0.2.3" }
   }

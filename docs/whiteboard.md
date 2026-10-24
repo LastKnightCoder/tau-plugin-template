@@ -11,8 +11,7 @@
 
 ```json
 {
-  "whiteboard": true,
-  "targets": { "desktop": { "minAppVersion": "0.59.2" } }
+  "targets": { "desktop": { "minAppVersion": "0.59.3" } }
 }
 ```
 

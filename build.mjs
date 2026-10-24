@@ -206,7 +206,7 @@ try {
   if (skills.ids.length) packaged.skills = skills.ids;
 
   if (validateManifest) {
-    if (portable) packaged = validateManifest(manifest, { main: "main.js", integrity, ...(styles ? { styles: "main.css" } : {}), ...(skills.ids.length ? { skills: skills.ids } : {}) });
+    if (portable) packaged = validateManifest(manifest, { imports: [...new Set(Object.values(result.metafile.outputs).flatMap(output => output.imports.filter(item => item.external && shared.includes(item.path)).map(item => item.path)))], main: "main.js", integrity, ...(styles ? { styles: "main.css" } : {}), ...(skills.ids.length ? { skills: skills.ids } : {}) });
     else validateManifest(packaged, { strict: true });
   }
   await writeFile(path.join(staging, "manifest.json"), JSON.stringify(packaged, null, 2));
