@@ -44,6 +44,7 @@ console.log(result.text);
 | `flashcardGeneration`          | 闪卡制作       |
 | `aiJudgement`                  | 答案评判       |
 | `transcriptionOptimization`    | 转录断句优化   |
+| `speechInputRefinement`        | 语音输入整理   |
 | `videoSummary`                 | 视频总结       |
 | `videoEbookRewrite`            | 视频电子书重写 |
 | `vibeLearningImageDescription` | 图片理解       |
@@ -167,3 +168,5 @@ for await (const event of model.stream({
 通过 `signal` 取消时，也可能抛出标准的 `AbortError`。
 
 遇到额度不足、拒绝授权这类错误后，不要自动循环重试。不要在模块顶层调用 AI；在 `activate` 中也不要等待 AI 请求完成，以免拖慢插件启用。
+
+`speechInputRefinement`（SDK 0.43.0 / 桌面 0.59.5）引用应用分配的语音整理模型，不是发起录音的接口。宿主听写整理本身不依赖插件，也不向整理模型授予工具；移动端尚未接入这一 LLM 执行能力。
