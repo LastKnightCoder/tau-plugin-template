@@ -19,7 +19,7 @@ const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
 const portable = manifest.targets !== undefined;
 if (!portable && (manifest.profile !== undefined || manifest.targets !== undefined))
   throw new Error("旧桌面格式不能混入跨端 profile/targets 声明");
-if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(manifest.id))
+if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(manifest.id))
   throw new Error("插件 ID 应为小写字母、数字及点或连字符组成的命名空间");
 if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(manifest.version)) throw new Error("插件版本无效");
 // manifest 不写 main 时构建独立 Skill 包：没有代码入口，只打包 skills/ 目录
