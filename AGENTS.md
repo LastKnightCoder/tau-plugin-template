@@ -14,7 +14,7 @@
 - 插件身份只在 `manifest.json` 中修改，入口沿用 `__PLUGIN_META__`。不要为日常升级修改插件 ID，改了 ID 用户的数据就找不回来了。
 - 运行状态放在 `create` 返回的闭包或组件里，不放在模块顶层。不要缓存 `context` 留到下次启用。
 - 通过 `context` 注册的东西会自动清理；自己创建的计时器、监听、连接交给 `context.register`。异步任务响应 `context.signal`，写回界面前检查 `context.signal.aborted`。
-- ASR 使用 SDK 0.43.0 的 context.asr；WebSocket 工厂 context.websocket.connect 同步返回标准连接，保留事件、状态和 send/close，不自行实现背压。ASR 最低宿主桌面 0.59.5、移动 0.2.5，详见 docs/providers/asr.md。SDK 未发布时只在仓库外注入候选包验证，不改写正式锁文件的 registry 记录。
+- ASR 使用 SDK 0.43.0 的 context.asr；WebSocket 工厂 context.websocket.connect 同步返回标准连接，保留事件、状态和 send/close，不自行实现背压。ASR 最低宿主桌面 0.59.5、移动 0.2.6，详见 docs/providers/asr.md。SDK 未发布时只在仓库外注入候选包验证，不改写正式锁文件的 registry 记录。
 - 两端网络请求均用 `context.fetch` 并检查 `response.ok`，无需额外声明网络能力。存储、网络响应、用户配置等外部数据读取后先校验类型。
 - 插件代码运行在浏览器环境，不能导入 Node.js 模块；需要 Node.js 时按 `docs/backend.md` 添加本机后台。
 - 格式 3 使用 pages + navigation，环境只含平台和指针精度，布局使用 CSS；基础 API 不做能力查询；Node 后台只能显式选择旧桌面格式，不能混入跨端包。

@@ -2,7 +2,7 @@
 
 # WebSocket
 
-`context.websocket.connect(url, protocols?, options?)` 同步返回标准 `WebSocket` 接口形状的连接。SDK 0.43.0 对应桌面 0.59.5、移动 0.2.5 的宿主实现；这不代表这些版本已发布。插件无需引入 Node.js `ws`，同一代码用于桌面、Android 与 iOS。
+`context.websocket.connect(url, protocols?, options?)` 同步返回标准 `WebSocket` 接口形状的连接。SDK 0.43.0 对应桌面 0.59.5、移动 0.2.6 的宿主实现；这不代表这些版本已发布。插件无需引入 Node.js `ws`，同一代码用于桌面、Android 与 iOS。
 
 ```ts
 const socket = context.websocket.connect("wss://api.example.com/stream", [], {
@@ -34,6 +34,6 @@ socket.close(1000, "完成");
 
 网络由原生层执行，不是浏览器的全局构造器实例：不要依赖 `instanceof WebSocket`、浏览器 Cookie、CORS 或浏览器扩展。宿主不自动携带浏览器 Cookie，不重连、不跟随重定向。允许 `wss`，仅本机测试允许 `ws`；`https/http` 转换为对应 WebSocket 协议后应用同一限制。地址禁止凭据和片段。鉴权头禁止换行以及覆盖 Host、Connection、Upgrade、Sec-WebSocket-*；子协议走 `protocols`。
 
-宿主每连接单消息上限 1 MiB，收发各自有界排队（最多 2 MiB），每宿主窗口最多 32 个连接，握手与关闭排空各限 10 秒。超限使连接失败，不静默丢语音帧、不自动重试带鉴权的请求。
+宿主每连接单消息上限 1 MiB，收发各自有界排队（最多 2 MiB），空消息也计入最多 256 条等待消息的限制（移动原生收包队列为 2 条），每宿主窗口最多 32 个连接，握手与关闭排空各限 10 秒。超限使连接失败，不静默丢语音帧、不自动重试带鉴权的请求。
 
 规范依据：[WHATWG WebSockets](https://websockets.spec.whatwg.org/)。此适配遵循上述事件、状态、发送与关闭语义，不宣称实现完整浏览器网络环境或通过全部 Web 平台一致性测试。
