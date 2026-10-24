@@ -97,6 +97,7 @@ export default definePlugin({
 | ---------------------- | ---------- | --------------------------------------------------------------------- |
 | `create`               | 运行时逻辑 | 每次启用时调用，返回本次运行的实例。只有静态声明的插件可以省略        |
 | `editorExtensions`     | 静态声明   | 编辑器块，见[编辑器扩展](editor.md)                                   |
+| `editorMetrics`        | 静态声明   | 自定义节点的统计字段，见[正文字数](content-metrics.md) |
 | `editorCodecs`         | 静态声明   | 编辑器块的 Markdown 转换，见[编辑器扩展](editor.md#markdown-导入导出) |
 | `whiteboardExtensions` | 静态声明   | 白板元素与工具，见[白板扩展](whiteboard.md)                           |
 | `ai`                   | 静态声明   | 插件自定义的 AI 功能，见 [AI](ai.md#自定义-ai-功能)                   |

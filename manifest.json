@@ -2,9 +2,14 @@
   "id": "example.external-counter",
   "name": "计数器示例",
   "description": "在功能入口中记录并保存计数。",
-  "categories": ["page"],
-  "keywords": ["计数", "打卡"],
-  "version": "1.2.2",
+  "categories": [
+    "page"
+  ],
+  "keywords": [
+    "计数",
+    "打卡"
+  ],
+  "version": "1.2.3",
   "targets": {
     "desktop": {
       "minAppVersion": "0.59.4"

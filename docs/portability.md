@@ -4,7 +4,7 @@
 
 一个 SDK、一套模板、同一插件 ID/版本对应同一 ZIP。普通页面直接使用公共 API；宿主在加载前检查兼容性。具体宿主实现范围见 [API 支持矩阵](api-support.md)，SDK 类型存在不等于所有接口都已在移动端接入。
 
-格式 3 也承载仅桌面的插件。使用业务数据、视频、语音合成、图片生成或博客发布等桌面能力时，只声明 desktop；不要增加尚未实现对应 API 的移动目标。白板插件继续使用 whiteboardExtensions，作者清单不重复填写白板类型，也不声明白板能力标签。宿主从实际定义识别静态贡献，作者只声明 desktop，安装兼容性统一由平台和最低客户端版本决定。
+格式 3 也承载仅桌面的插件。使用业务数据、视频、图片生成或博客发布等桌面能力时，只声明 desktop；不要增加尚未实现对应 API 的移动目标。白板插件继续使用 whiteboardExtensions，作者清单不重复填写白板类型，也不声明白板能力标签。宿主从实际定义识别静态贡献，作者只声明 desktop，安装兼容性统一由平台和最低客户端版本决定。
 
 ## 作者清单
 
@@ -109,6 +109,10 @@ React、SDK 与公共 UI 由宿主提供，其他浏览器依赖随包构建；�
 
 仓库外构建验证依赖闭包、类型和包格式；设备联调验证安装、启用、插入、编辑、保存、取消、只读与重启恢复。两者分别记录，模拟器不能替代真机、最低系统、平板与性能验收。发布 SDK、插件和客户端分别遵循明确发行授权。
 
+## 语音合成提供方
+
+`context.tts.register` 与 `settings target: "tts"` 两端为同一接口，移动最低 0.2.7。账号、模型、当前音色与试听由宿主「语音合成」设置统一管理，表单只接收 `ttsConfig`（instanceId、value、models、save），不要自行持久化凭据或选择音色。手机屏幕与桌面表单布局不同时，按 `usePluginEnvironment().platform` 渲染各自的组件。复刻需要公网地址时使用 `context.upload.uploadRemote`，本地保存模式下应明确报错，不要伪造地址。
+
 ## 语音输入提供方
 
-ASR 与语音合成是独立注册。语音输入插件使用 `context.asr.register` 和 `settings target: "asr"`，账号通过 `asrConfig.save(value, modelId)` 保存；麦克风、重采样、输入目标、提交守卫由宿主管理。SDK 0.43.0 要求 ASR 目标最低桌面 0.59.5、移动 0.2.7。`context.websocket.connect` 同步返回标准 WebSocket 接口形状，鉴权头和任务 signal 为第三参扩展；两端的发送背压、关闭握手和插件生命周期由宿主统一处理。详见 [WebSocket](websocket.md)。
+ASR 与语音合成是独立注册。语音输入插件使用 `context.asr.register` 和 `settings target: "asr"`，账号通过 `asrConfig.save(value, modelId)` 保存；麦克风与重采样由宿主管理，输入目标及提交守卫由后续界面消费者负责。当前未挂载语音输入和整理入口，ASR 表单保留注册但不显示。SDK 0.43.0 要求 ASR 目标最低桌面 0.59.5、移动 0.2.7。`context.websocket.connect` 同步返回标准 WebSocket 接口形状，鉴权头和任务 signal 为第三参扩展；两端的发送背压、关闭握手和插件生命周期由宿主统一处理。详见 [WebSocket](websocket.md)。

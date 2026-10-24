@@ -18,7 +18,7 @@
 | `context.navigation`                                                            | 侧栏入口                                   | “我的”功能入口                          | “我的”功能入口     | 页面与入口分别注册；不操作宿主 history 或导入宿主路由                                            |
 | `context.commands`                                                              | 注册与命令面板已接                         | 部分：注册/回收已接，无统一插件命令面板 | 同 Android         | 命令注册不自动产生手机可点击入口，主要功能另注册 navigation                                      |
 | `context.storage`                                                               | 工作区 KV                                  | 工作区 SQLite KV                        | 工作区 SQLite KV   | JSON 私有数据；单值上限 1 MiB；不是业务数据库、结构化集合或安全凭据库                            |
-| `context.settings`                                                              | 插件设置及领域设置已接                     | 插件设置及同步/上传领域设置             | 同 Android         | 移动支持 sync/upload target，其他领域仍未接；通用设置直接注册                                    |
+| `context.settings`                                                              | 插件设置及领域设置已接                     | 插件设置及同步/上传/语音合成领域设置    | 同 Android         | 移动支持 sync/upload/tts target，asr 可注册但不开放入口，其他领域仍未接；通用设置直接注册        |
 | `context.editor`                                                                | 动态 register 限工作台；普通正文用静态贡献 | 动态 register 未接                      | 动态 register 未接 | 跨端正文通过 definePlugin 的 editorExtensions/editorCodecs，不能在 activate 动态注册来替代       |
 | `context.fetch`                                                                 | 宿主原生流式传输已接                       | 原生 HTTP(S) 流式传输已接               | 同 Android         | 参数与返回值相同；移动无额外 128 MiB 总量上限，支持流与取消，不携带浏览器 Cookie，不承诺后台续传 |
 | `context.services`                                                              | 按宿主注入服务                             | 未注入作者业务服务                      | 同 Android         | 不把类型中的编译、媒体、转换等服务当成移动通用能力                                               |
@@ -34,14 +34,15 @@
 | `context.sidebar`、`context.home`、`context.actions`、`context.views`           | 已接                                       | 未接                                    | 未接               | 跨端入口改用 navigation；首页面板、对象动作、详情区块不得自动映射为手机支持                      |
 | `context.notifications`                                                         | 已接                                       | 未接                                    | 未接               | 不承诺移动系统通知或后台通知                                                                     |
 | `context.sync`、`context.upload`                                                | 领域提供方已接                             | 同一注册与配置 API 已接                 | 同 Android         | 宿主负责流程与选用，插件实现远端存储；账号独立，不做统一共享                                     |
-| `context.tts`、`context.images`、`context.video`、`context.publish`             | 领域提供方已接                             | 未接                                    | 未接               | 本轮不扩大其他业务领域                                                                           |
+| `context.tts`                                                                   | 领域提供方已接                             | 同一注册与配置 API 已接（0.2.7）        | 同 Android         | 账号、模型、当前音色与试听由宿主统一管理；移动端不含编辑器朗读、播客与后台播放                   |
+| `context.images`、`context.video`、`context.publish`                            | 领域提供方已接                             | 未接                                    | 未接               | 本轮不扩大其他业务领域                                                                           |
 | `context.backend`                                                               | 格式 2 独立后台与授权已接                  | 格式 3 不支持                           | 格式 3 不支持      | Node、子进程、本机程序使用独立的桌面后台包                                                       |
 
 ## ASR 与 WebSocket
 
-SDK 0.43.0 的 `context.asr`、`context.websocket` 与 `settings target: "asr"` 已接桌面 0.59.5、Android/iOS 0.2.7 宿主源码。移动插件使用同一注册、配置和事件接口，音频由宿主采集，插件不访问麦克风。设备与真实云端账号验收单独记录；Windows 原生识别仍待验证，不影响插件契约。
+SDK 0.43.0 的 `context.asr`、`context.websocket` 与 `settings target: "asr"` 已接桌面 0.59.5、Android/iOS 0.2.7 宿主源码。移动插件使用同一注册、配置和事件接口，音频由宿主采集，插件不访问麦克风。当前仅保留能力层，语音输入与整理的按钮、设置页和导航尚未挂载；ASR 表单可注册，open 返回入口不可用。设备与真实云端账号验收单独记录；Windows 原生识别仍待验证，不影响插件契约。
 
-ASR 支持能力探测、可取消的流式会话与可选文件任务；提供方必须真实声明能力，Seed 当前仅流式。WebSocket 的工厂仅扩展鉴权头和 signal，连接保留标准事件、状态、同步 send/close；详见 [WebSocket 契约](websocket.md)。聊天和搜索只在最终结果后写入草稿；桌面可选 AI 整理复用现有模型配置，移动暂使用原文。
+ASR 支持能力探测、可取消的流式会话与可选文件任务；提供方必须真实声明能力，Seed 当前仅流式。WebSocket 的工厂仅扩展鉴权头和 signal，连接保留标准事件、状态、同步 send/close；详见 [WebSocket 契约](websocket.md)。桌面整理服务复用现有模型配置，保留原文和失败回退；输入目标及界面位置由后续接入方决定。
 
 ## 正文、UI 与交互
 
@@ -76,3 +77,7 @@ ASR 支持能力探测、可取消的流式会话与可选文件任务；提供�
 5. SDK、模板、中心与宿主共用平台和版本契约；不保留重复能力声明或名称映射。普通提交人工批准，具审核权限的作者本人通过已绑定仓库 CI 发布可自动批准。平台适配与功能测试由作者负责，不要求审核者测试或填写验证记录。是否可安装由平台、客户端版本与中心开关共同决定，不能由 npm 版本推断。移动中心首次安装默认保存启用意图，下次打开生效；桌面新装默认停用，用户启用后重启内容插件；更新保留显式启停选择。任意开发 URL 安装仅限调试构建。
 
 已完成的自动测试与模拟器行为验证不替代真机、最低系统、完整 IPA、桌面原生安装包发行、未知旧作者迁移或应用商店验收。
+
+## 正文字数
+
+SDK 0.44.0 的静态 editorMetrics 在桌面与移动内容注册表装配；桌面主进程只接收校验过的字段声明，不执行插件函数。动态工作台使用 metrics 字段。作者用法见[正文字数与空文档](content-metrics.md)。

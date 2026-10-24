@@ -626,3 +626,7 @@ defineEditorExtension({
 ```
 
 `toHtml` 返回 HTML 字符串，文本内容要自己转义。它只用于静态导出，博客里的显示仍然使用 `render`。
+
+## 正文字数与空文档
+
+自定义节点通过 SDK 0.44.0 的 `editorMetrics` 声明哪些字段参与统计，与 `editorExtensions`、`editorCodecs` 一起静态导出。代码示例、数组字段、容器遍历与空文档边界见[正文字数协议](content-metrics.md)。
