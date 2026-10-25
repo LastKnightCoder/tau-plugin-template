@@ -1,4 +1,8 @@
+<!-- 由 scripts/plugins/sync-author-docs.mjs 从 packages/plugins/docs/whiteboard.md 生成，请勿单独编辑。 -->
+
 # 白板扩展
+
+本文描述仓库内已绑定协作文档的桌面白板作者接口，不能据此推断线上版本已可用。支持范围见 [API 支持矩阵](api-support.md)，协作约束见 [白板协作](whiteboard-collaboration.md)。
 
 白板扩展让你在 Tau 的白板上添加自己的元素（如图形、图表、组件），以及创建它们的工具。白板扩展分为两部分：
 
@@ -11,9 +15,11 @@
 
 ```json
 {
-  "targets": { "desktop": { "minAppVersion": "0.59.4" } }
+  "targets": { "desktop": { "minAppVersion": "0.59.5" } }
 }
 ```
+
+这里的客户端版本是源码验收候选，不是已发布兼容承诺；上架前须使用实际发行的客户端核对版本下限。本文示例使用 SDK 0.45.0 的白板作者接口；从旧 SDK 升级须按[协作约束](whiteboard-collaboration.md)适配身份命令、数据版本和文本绑定。白板只声明 desktop，SDK 发布不代表对应客户端已发行。
 
 ### 2. 定义扩展
 
@@ -45,6 +51,7 @@ const boxExtension = defineWhiteboardExtension({
   elements: [
     defineElement({
       type: BOX,
+      dataVersion: 1,
       presentation: { label: "方块", icon: BoxIcon },
       render: ({ element }) => (
         <rect
@@ -96,7 +103,7 @@ export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExte
 
 ## 元素
 
-元素的通用字段（`id`、`type`、`x`、`y`、`width`、`height` 等）在元素顶层，你自己的数据放在 `data` 里。
+渲染与创建回调沿用元素的 `x/y/width/height` 外壳，你自己的数据放在 `data` 里。`api.getElement/getSnapshot` 返回的只读作者快照则以 `geometry` 承载完整几何；写命令时使用该对象，不把渲染回调的顶层坐标直接当作补丁。
 
 ### 元素声明
 
@@ -108,7 +115,10 @@ export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExte
 | `create`                   | 可选。创建方式，声明后才能注册创建型工具，见[创建工具](#创建工具)                    |
 | `interaction`              | 可选。缩放手柄与连接点，见下文                                                       |
 | `schema`                   | 可选。约束 `data` 结构的 [Standard Schema](https://standardschema.dev)，必须同步校验 |
-| `schemaVersion`、`migrate` | 可选。`data` 结构的版本号，以及从旧版本逐步升级的迁移函数                            |
+| `dataVersion` | 必填正整数；表示业务数据版本，与插件发行版本分开 |
+| `collaboration.textFields` | 可选，data 中需要协作编辑的顶层字符串字段 |
+| `resources` | 可选，data 中资源位置的纯数据声明；不授予读取或上传权限 |
+| `previousVersions`、`migrations` | 可选，直接历史版本与纯业务载荷转换；加载不执行转换 |
 | `sketch`                   | 可选。为 `true` 时元素支持手绘画风，见[手绘画风](#手绘画风)                          |
 | `schematic`                | 可选。简略预览，见[简略预览](#简略预览)                                              |
 
@@ -121,6 +131,8 @@ interface StickyData {
 
 defineElement<StickyData>({
   type: `${__PLUGIN_META__.id}.sticky`,
+  dataVersion: 1,
+  collaboration: { textFields: ["text"] },
   render: ({ element }) => <text x={element.x} y={element.y}>{element.data.text}</text>,
 });
 ```
@@ -144,17 +156,33 @@ interaction: {
 
 ### 版本迁移
 
-`data` 的结构需要变化时，提高 `schemaVersion`，并在 `migrate` 中提供每一步升级：
+数据结构有不兼容变化时提高 `dataVersion`，登记需要识别的精确历史定义，并提供直接转换到当前版本的函数：
 
 ```ts
-schemaVersion: 2,
-migrate: {
-  // 从版本 1 升到版本 2
-  1: element => ({ ...element, data: { ...element.data, color: "accent" } }),
-},
+const sourceV1 = defineElement({
+  type: `${__PLUGIN_META__.id}.source`,
+  dataVersion: 1,
+  collaboration: { textFields: ["source"] },
+  render: () => null,
+});
+const sourceV2 = defineElement({
+  ...sourceV1,
+  dataVersion: 2,
+  collaboration: { textFields: ["code"] },
+  previousVersions: [{ element: sourceV1, access: "read" }],
+  migrations: [{
+    from: 1,
+    migrate(data) {
+      if (typeof data.source !== "string" || Object.hasOwn(data, "code"))
+        throw new Error("旧源码无效或目标字段已存在");
+      const { source, ...rest } = data;
+      return { ...rest, code: source };
+    },
+  }],
+});
 ```
 
-`migrate` 必须覆盖从 1 到当前版本的每一步。
+转换函数只处理业务载荷，输入不可修改，保留未知属性，不接触网络、数据库、时间或随机数。身份、位置、正文与资源权限由宿主维护。安装插件不会转换现有节点；跨字段根的变化通过宿主整文档换代，插件不能设置 epoch。缺插件、未知版本按原契约保留，不能拿最新版 schema 自动修复。旧 `schemaVersion/migrate` 不属于当前作者接口。
 
 ## 创建工具
 
@@ -227,12 +255,26 @@ panel: ({ run }) => (
 
 | 方法                                      | 用途                                           |
 | ----------------------------------------- | ---------------------------------------------- |
-| `api.updateElement(id, patch)`            | 修改一个元素的属性                             |
-| `api.submit(operations)`                  | 提交一组结构性操作（增删元素等），作为一步撤销 |
+| `api.updateElement(id, patch)`            | 修改 name、完整 geometry、style                             |
+| `api.submit(commands, options?)`           | 提交 create/set_node/set_data/move_node/remove_nodes 身份命令 |
 | `api.select(ids)`                         | 设置选区                                       |
 | `api.getElement(id)`、`api.getSnapshot()` | 读取元素与画布快照                             |
 | `api.setActiveTool(id)`                   | 切换当前工具                                   |
 | `api.readonly`                            | 画布是否只读                                   |
+
+普通业务属性使用 `api.updateElementData(id, patch, { unset?, historyGroup? })`，未指定字段保留；文本字段使用 `api.getTextBinding(id, field)` 的观察修订与增量编辑，不通过普通 patch 覆盖。
+
+```ts
+const pageId = api.getSnapshot().pageId;
+const { createdIds } = api.submit([{
+  type: "create",
+  element: { type: BOX, data: {}, geometry: { x: 20, y: 20, width: 120, height: 80, rotation: 0 } },
+  parent: { kind: "page", id: pageId },
+}]);
+api.updateElementData(createdIds[0], { label: "方块" });
+```
+
+命令不接受数组路径、契约 ID、Y.Doc 或共享根；返回值仅表示本机接纳。手势、字段输入和批量命令共用宿主历史，不自行再记撤销栈。异步结果使用 `captureSubmission` 检查生命周期，但这不是内容修订比较；整段文本条件替换只能走已提供的宿主条件入口，冲突时保留草稿，不擅自读取新值后覆盖。当前冻结作者 API 不提供通用异步 CAS。
 
 这些方法统一处理只读、撤销和生命周期。元素组件中可以用 `useWhiteboardAPI()` 拿到所属扩展的 `api`。
 
@@ -275,7 +317,7 @@ defineWhiteboardExtension({
 });
 ```
 
-- 存储按插件和工作区隔离，与 [`context.storage`](storage-and-network.md) 是同一份数据。
+- 存储按插件和工作区隔离，与 `context.storage` 是同一份数据。
 - 只在交互贡献、工具面板、属性面板和 `create.build` 中使用。元素的 `render` 和 `schematic` 只能依据元素数据，不能读存储。
 - 读取失败时不要当成空数据再写回，否则会覆盖用户原有的偏好。
 

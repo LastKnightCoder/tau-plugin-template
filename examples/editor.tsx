@@ -54,6 +54,7 @@ export default definePlugin({
       elements: [
         defineEditorElement<NoteElement>({
           type: "example.note",
+          dataVersion: 1,
           kind: "block",
           isVoid: true,
           drag: true,

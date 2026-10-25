@@ -73,13 +73,13 @@ coarsePointer 对应 (any-pointer: coarse)，finePointer 对应 (any-pointer: fi
 
 宿主只把公开的扩展字段交给编辑器内核，附加属性不会执行。
 
-优先使用 SourceBlockEditor/useSourceBlock 与公开的节点 API。标准插入、选区、源码草稿保存/取消、只读和迟到提交保护由宿主负责；节点允许移动不等于所有平台都采用鼠标拖拽。
+优先使用 SourceBlockEditor/useSourceBlock 与公开的节点 API。标准插入、选区、源码增量、只读和迟到提交保护由宿主负责；节点允许移动不等于所有平台都采用鼠标拖拽。
 
 图册排序、绘图等专有交互仍由作者实现。基础操作保留可点击/可聚焦按钮，拖拽与悬停只作增强；布局按实际容器调整，共享编辑状态和提交函数，方向或输入变化不能丢失草稿。不能为手机另建一套节点类型。
 
 ## 宿主服务与当前作用域
 
-源码编辑和样式编译直接通过 SourceBlockEditor/useSourceBlock/useInlineSource 使用，宿主负责注入实现，不再检查字符串声明。只读、取消、编译失败仍遵循接口语义。博客只读环境可以显示已保存内容或源码，不启动应用插件生命周期。
+源码编辑和样式编译直接通过 SourceBlockEditor/useSourceBlock/useInlineSource 使用，宿主负责注入实现，不再检查字符串声明。只读、输入失败与编译失败仍遵循接口语义。博客只读环境可以显示已保存内容或源码，不启动应用插件生命周期。
 
 useResourceUpload() 在只读或没有资源存储的作用域返回 undefined，表示当前不能上传。白板服务直接通过 getService 获取必需服务、tryGetService 获取允许缺省的服务，不另列 requires/optional；宿主仍按扩展绑定服务注册表，插件私有存储按插件和工作区隔离。服务缺失与调用失败按实际 API 返回值或异常处理。
 
@@ -95,6 +95,10 @@ useResourceUpload() 在只读或没有资源存储的作用域返回 undefined�
 
 同步提供方继续实现相同的 `Uint8Array` 对象接口。宿主统一管理数据库、资源和会话的分块、校验与重组，作者无需增加移动分支或专用分片。对象名由宿主决定，提供方应原样存取字节，不依赖数据库后缀、目录布局或清单内容。公网直链上传仍接收完整资源并返回真实 HTTP(S) URL，其内存与远端服务约束保持原样。
 
+## 语音合成提供方
+
+`context.tts.register` 与 `settings target: "tts"` 两端为同一接口，移动最低 0.2.7。账号、模型、当前音色与试听由宿主「语音合成」设置统一管理，表单只接收 `ttsConfig`（instanceId、value、models、save），不要自行持久化凭据或选择音色。手机屏幕与桌面表单布局不同时，按 `usePluginEnvironment().platform` 渲染各自的组件。复刻需要公网地址时使用 `context.upload.uploadRemote`，本地保存模式下应明确报错，不要伪造地址。
+
 ## 构建和分发
 
 buildPortablePluginManifest(authorManifest, output) 接收作者清单和构建器提供的 main/styles/integrity/skills，输出格式 3、apiVersion 1、profile web-v1、CJS 单入口的发行清单。targets 仅记录各平台 minAppVersion，插件中心只消费规范化结果，不执行作者源码。读取器提取协议字段，忽略附加元信息；只校验身份、协议、授权、文件完整性和实际数据约束，不限制简介、关键词或 Skill 数量。版本使用 SemVer，允许预发布和构建标识。
@@ -108,10 +112,6 @@ React、SDK 与公共 UI 由宿主提供，其他浏览器依赖随包构建；�
 ## 验证
 
 仓库外构建验证依赖闭包、类型和包格式；设备联调验证安装、启用、插入、编辑、保存、取消、只读与重启恢复。两者分别记录，模拟器不能替代真机、最低系统、平板与性能验收。发布 SDK、插件和客户端分别遵循明确发行授权。
-
-## 语音合成提供方
-
-`context.tts.register` 与 `settings target: "tts"` 两端为同一接口，移动最低 0.2.7。账号、模型、当前音色与试听由宿主「语音合成」设置统一管理，表单只接收 `ttsConfig`（instanceId、value、models、save），不要自行持久化凭据或选择音色。手机屏幕与桌面表单布局不同时，按 `usePluginEnvironment().platform` 渲染各自的组件。复刻需要公网地址时使用 `context.upload.uploadRemote`，本地保存模式下应明确报错，不要伪造地址。
 
 ## 语音输入提供方
 

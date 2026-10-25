@@ -53,6 +53,21 @@ context.settings.register({
 - 表单只编辑当前这一个账号，不要影响同插件的其他账号，也不要把它设为默认。
 - 模型列表由你的表单提供，可以允许用户填写自定义模型。
 
+## 手机端
+
+手机端（0.2.7 起）使用同一套 `context.tts` 和 `ttsConfig`。账号名称、模型管理、当前音色、试听和音色复刻都由 Tau 的「我的 → 语音 → 语音合成」提供，你的表单只需要编辑凭据等服务商参数。
+
+桌面表单的布局放进手机往往太挤，可以按平台渲染不同组件：
+
+```tsx
+function TTSSettingsView(props: PluginSettingsProps) {
+  const { platform } = usePluginEnvironment();
+  return platform === "desktop" ? <TTSSettings {...props} /> : <MobileTTSSettings {...props} />;
+}
+```
+
+同时在 `manifest.json` 的 `targets` 里声明 `android`、`ios`。
+
 ## 上传参考音频
 
 服务需要参考音频的公开地址时，用 `context.upload.uploadRemote(file, { signal })` 上传，它使用用户选择的上传配置，见[资源上传](upload.md#在其他功能中使用上传)。不要自己选择用户的上传插件或读取上传凭据。服务商自带文件上传接口的，直接用服务商的接口即可。

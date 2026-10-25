@@ -1,6 +1,6 @@
 # AI 编程助手指引
 
-这是 Tau 的统一插件模板，使用 SDK 0.44.0 与 UI 0.5.0。格式 3 沿用中心上架规则：普通提交人工批准，具审核权限的作者本人经已绑定仓库 CI 发布可自动批准，作者负责平台适配与测试，不要求审核者测试或填写验证记录。当前模板要求移动客户端至少 0.2.4、桌面至少 0.59.4；实际安装还须通过中心兼容选版和平台分发开关。先读 docs/api-support.md、docs/portability.md 和 docs/getting-started.md。仅在用户明确要求时发布或上传，不向生产提交一次性测试包，不将格式 3 写入旧正式目录。
+这是 Tau 的统一插件模板，使用 SDK 0.45.0 与 UI 0.5.0。格式 3 沿用中心上架规则：普通提交人工批准，具审核权限的作者本人经已绑定仓库 CI 发布可自动批准，作者负责平台适配与测试，不要求审核者测试或填写验证记录。当前模板要求移动客户端至少 0.2.4、桌面至少 0.59.4；实际安装还须通过中心兼容选版和平台分发开关。先读 docs/api-support.md、docs/portability.md 和 docs/getting-started.md。仅在用户明确要求时发布或上传，不向生产提交一次性测试包，不将格式 3 写入旧正式目录。
 
 ## 开始之前
 
@@ -18,7 +18,7 @@
 - 两端网络请求均用 `context.fetch` 并检查 `response.ok`，无需额外声明网络能力。存储、网络响应、用户配置等外部数据读取后先校验类型。
 - 插件代码运行在浏览器环境，不能导入 Node.js 模块；需要 Node.js 时按 `docs/backend.md` 添加本机后台。
 - 格式 3 使用 pages + navigation，环境只含平台和指针精度，布局使用 CSS；基础 API 不做能力查询；Node 后台只能显式选择旧桌面格式，不能混入跨端包。
-- 编辑器块和白板元素的渲染代码也会在博客中运行，不能依赖 `activate` 或 `context`，见 `docs/editor.md`。
+- 编辑器块的渲染代码也可用于博客；白板作者宿主仅在桌面提供。静态渲染不要依赖 `activate` 或 `context`，见 `docs/editor.md` 与 `docs/whiteboard-collaboration.md`。
 - 编辑器块里的图片、视频、音频用 `MediaImage` 等宿主组件显示，存地址的字段写进节点的 `resources`，见 `docs/editor.md`。
 - 样式选择器加插件专属前缀；用 Tailwind 时用 `prefix()` 给全部类名加前缀，见 `docs/ui.md`。
 - 桌面访问用户数据要声明权限并处理 PluginPermissionError；修改、删除传入 revision 并处理 PluginConflictError。移动目标的 permissions 必须为空，data/content/entities/records/links/transaction 等尚未接线，不能以 KV 支持推断可用。

@@ -431,11 +431,11 @@ export default definePlugin({
 
 ## 源码预览块
 
-很多块的模式是"上面编辑源码，下面显示预览"，比如图表、公式、组件演示。`SourceBlockEditor` 提供了 Tau 统一的源码预览外壳：源码编辑、全屏、错误提示、删除，以及与相邻块之间的光标移动。
+很多块的模式是"源码 + 预览"，比如图表、公式、组件演示。`SourceBlockEditor` 提供了 Tau 统一的源码预览外壳：源码编辑、错误提示、删除，以及与相邻块之间的光标移动。源码字段经 `field` 绑定，输入即时写入节点并进入撤销记录，协作时按增量同步；插件不需要自己写回源码。
 
 ```tsx
 import type { ReactNode } from "react";
-import { SourceBlockEditor, useSourceBlock } from "@tau/plugins";
+import { SourceBlockEditor, defineEditorElement } from "@tau/plugins";
 import { Code } from "lucide-react";
 
 interface DiagramElement {
@@ -445,43 +445,46 @@ interface DiagramElement {
 }
 
 function DiagramBlock({ element, children }: { element: DiagramElement; children: ReactNode }) {
-  const { update } = useSourceBlock(element);
   return (
-    <SourceBlockEditor
-      element={element}
-      mode="jsx"
-      title="图表"
-      icon={Code}
-      initValue={element.content}
-      onChange={content => update({ content })}
-    >
+    <SourceBlockEditor element={element} field="content" mode="javascript" title="图表" icon={Code}>
       <DiagramPreview source={element.content} />
       {children}
     </SourceBlockEditor>
   );
 }
+
+export const diagramElement = defineEditorElement<DiagramElement>({
+  type: "yourname.diagram",
+  dataVersion: 1,
+  // field 绑定的字段必须声明为文本字段
+  collaboration: { textFields: ["content"] },
+  kind: "block",
+  isVoid: true,
+  render: props => <DiagramBlock {...props} />,
+});
 ```
 
-在节点的 `render` 里使用 `DiagramBlock`。`icon` 需要一个 lucide-react 图标，先 `pnpm add lucide-react`。
+`icon` 需要一个 lucide-react 图标，先 `pnpm add lucide-react`。
 
-| `SourceBlockEditor` 属性 | 说明                                     |
-| ------------------------ | ---------------------------------------- |
-| `element`                | 当前节点                                 |
-| `mode`                   | 源码编辑器的语言模式，如 `jsx`、`html`   |
-| `title`、`icon`          | 块的标题和图标                           |
-| `initValue`              | 源码初始值                               |
-| `onChange`               | 源码变化时调用，通常用 `update` 写回节点 |
-| `center`、`extend`       | 可选。预览居中、预览区域扩展到更宽       |
-| `children`               | 预览内容                                 |
+| `SourceBlockEditor` 属性 | 说明                                                                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `element`                | 当前节点                                                                                            |
+| `field`                  | 存源码的字段名，需在节点的 `collaboration.textFields` 中声明                                        |
+| `mode`                   | 源码的语言，用于语法高亮，如 `javascript`、`htmlmixed`、`stex`、`typst`；没有对应语法时按纯文本显示 |
+| `title`、`icon`          | 块的名称和图标，显示在编辑标题、空块占位和手机配件栏上                                              |
+| `center`、`extend`       | 可选。预览内容居中；预览区上下多留一点空间                                                          |
+| `children`               | 预览内容                                                                                            |
+
+桌面上，点块上的「编辑」在块内展开源码，下方实时预览。手机上，正文只显示预览：点一下选中块，配件栏给出「编辑」「复制」和块操作，「编辑」打开上方预览、下方源码的源码页；预览比屏幕宽时在块内横向滚动。两端的交互都由 Tau 提供，插件只需提供预览，不要在块上自己放编辑按钮。
 
 相关工具：
 
-| 接口                                        | 用途                                                                                         |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `useSourceBlock(element)`                   | 返回 `update`（修改节点字段）、`theme`（当前主题）和 `compiler`（Tailwind 编译器，可能为空） |
-| `useReportPreviewError(message, { stale })` | 预览出错时上报错误，传 `null` 清除；`stale` 表示是否保留了上一次成功的预览                   |
-| `insertSourceBlock(editor, element, line?)` | 插入节点并把光标放进源码编辑器，适合在块菜单的 `onClick` 中使用                              |
-| `sourceBlockParagraphBehavior(type)`        | 放进 `behaviorsFor.paragraph`，让用户在段首按退格时进入上方的源码块                          |
+| 接口                                        | 用途                                                                                                                                                         |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `useSourceBlock(element)`                   | 返回 `update`（修改节点字段）、`theme`（当前主题）和 `compiler`（Tailwind 编译器，可能为空）                                                                 |
+| `useReportPreviewError(message, { stale })` | 预览出错时上报错误，传 `null` 清除；`stale` 表示是否保留了上一次成功的预览。在源码预览块内由块统一显示错误，返回 `false`（不在块内，如博客）时预览需自己显示 |
+| `insertSourceBlock(editor, element, line?)` | 插入节点并打开源码编辑（桌面在块内，手机打开源码页），适合在块菜单的 `onClick` 中使用                                                                        |
+| `sourceBlockParagraphBehavior(type)`        | 放进 `behaviorsFor.paragraph`，让用户在段首按退格时进入上方的源码块                                                                                          |
 
 `theme.isDark` 表示当前是否为暗色主题，`theme.token(word)` 读取主题色值，预览应随主题变化。`compiler` 只在桌面编辑器中可用，在博客里为空，此时配合下文的 `styleSources` 使用预先生成的样式。
 
