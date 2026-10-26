@@ -30,13 +30,13 @@ const source = defineElement({
 
 ## 最小数据入口
 
-| 入口 | 行为 |
-| --- | --- |
-| `getSnapshot()` / `getElement(id)` | 返回只读数据；快照包含 pageId、children，元素包含 id/type/data/geometry 等公共外壳，不暴露契约 ID 或字段根 |
-| `updateElement(id, patch)` | 只接受 name、完整 geometry 和 style；不能替换 data 或改变身份/子树 |
-| `updateElementData(id, patch, { unset?, historyGroup? })` | 只修改自己的可编辑版本，未指定字段保留；删除使用 unset |
-| `getTextBinding(id, field)` | 按精确版本的 textFields 读取，编辑使用观察 revision 与增量；共享宿主历史 |
-| `submit(commands, { historyGroup? })` | create、set_node、set_data、move_node、remove_nodes 身份命令，一批失败零写入，返回 createdIds |
+| 入口                                                      | 行为                                                                                                       |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `getSnapshot()` / `getElement(id)`                        | 返回只读数据；快照包含 pageId、children，元素包含 id/type/data/geometry 等公共外壳，不暴露契约 ID 或字段根 |
+| `updateElement(id, patch)`                                | 只接受 name、完整 geometry 和 style；不能替换 data 或改变身份/子树                                         |
+| `updateElementData(id, patch, { unset?, historyGroup? })` | 只修改自己的可编辑版本，未指定字段保留；删除使用 unset                                                     |
+| `getTextBinding(id, field)`                               | 按精确版本的 textFields 读取，编辑使用观察 revision 与增量；共享宿主历史                                   |
+| `submit(commands, { historyGroup? })`                     | create、set_node、set_data、move_node、remove_nodes 身份命令，一批失败零写入，返回 createdIds              |
 
 创建命令使用 `{ type: "create", element: { type, data, geometry }, parent: { kind: "page" | "element", id }, beforeId? | afterId? }`；同一次提交原子登记契约和节点。移动使用稳定 ID 与互斥锚点，不能传数组路径。普通返回值只表示本机接纳，不表示耐久落盘或服务端确认；保存状态由宿主统一展示。
 

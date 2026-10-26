@@ -97,11 +97,11 @@ context.settings.register({
   id: "video",
   title: "我的视频站",
   target: "video",
-  component: VideoSettings,
+  form: { groups: [{ title: "连接", fields: [{ key: "proxy", label: "代理地址", type: "url", optional: true }] }] },
 });
 ```
 
-组件收到 `videoConfig`：`value` 和 `save(value)`，每个插件一份配置。保存后，下一次 `create` 就会读到新的值。
+配置归插件页，应用设置显示已启用来源；多个来源按 URL 匹配，不互斥。扫码登录等特殊交互可使用 component，组件收到 `videoConfig`：`value` 和 `save(value)`，每个插件一份配置。保存后，下一次 `create` 就会读到新的值。
 
 ## 插件不可用时
 

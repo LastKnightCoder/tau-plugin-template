@@ -58,16 +58,55 @@ Tau 用它来保证多台设备同时同步时不会互相覆盖。它必须使�
 
 ## 配置表单
 
+同步与上传的配置表单只声明字段，不写界面。Tau 在插件详情 › 设置里按平台渲染（桌面为设置行，手机为分组行与推入式选择页），负责保存、必填校验、连接测试和服务选用；设置 › 同步 / 资源存储只列出各服务的摘要与状态。
+
 ```ts
 context.settings.register({
   id: "sync",
   title: "我的存储",
   target: "sync",
-  component: SyncSettings,
+  form: {
+    groups: [
+      {
+        title: "账号",
+        fields: [
+          { key: "accessKey", label: "Access Key", type: "text" },
+          { key: "secretKey", label: "Secret Key", type: "secret" },
+        ],
+      },
+      {
+        title: "存储位置",
+        fields: [
+          { key: "bucket", label: "Bucket", type: "text", summary: true },
+          { key: "prefix", label: "目录", type: "text", optional: true, placeholder: "sync" },
+          {
+            key: "style",
+            label: "地址模式",
+            type: "choice",
+            default: "path",
+            options: [{ value: "path", label: "路径模式" }, { value: "host", label: "虚拟主机模式" }],
+          },
+        ],
+      },
+    ],
+    // 可选：保存前补全或校验，抛出的错误原样显示给用户
+    beforeSave: async (values, signal) => values,
+  },
 });
 ```
 
-组件从 `syncConfig.value` 读取配置，用 `await syncConfig.save(config)` 保存。字段和校验由你决定。
+| 字段类型        | 用途                                                                 |
+| --------------- | -------------------------------------------------------------------- |
+| `text`          | 普通文本                                                             |
+| `secret`        | 密钥、令牌、密码；不能作摘要                                         |
+| `url`           | 地址                                                                 |
+| `choice`        | 固定选项，`default` 为缺省值                                         |
+| `remote-choice` | 按已填的值远程加载选项（如仓库、分支），`dependsOn` 中的字段变化时清空 |
+
+- 未标 `optional` 的字段都是必填，空值时 Tau 拒绝保存并标在字段上；「可选」由 Tau 显示，不要写进 label。
+- `summary: true` 的字段按顺序拼成服务列表里的摘要，例如「tau-sync · ap-southeast-1」。
+- 配置值一律是字符串；保存时与已存配置合并，未声明的键原样保留。
+- 保存不会改变用户当前选用的服务；选用由用户在设置页或插件设置页单独操作。
 
 - 每次同步任务开始时，Tau 用当时的配置调用 `create`，任务过程中配置不变。
 - 关闭设置页不影响进行中的同步。

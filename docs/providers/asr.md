@@ -2,7 +2,7 @@
 
 使用 SDK 0.43.0，目标最低桌面 0.59.5、Android/iOS 0.2.7。宿主版本与 SDK 的正式发布状态分开检查。模板当前依赖与正式安装流程见[快速开始](/docs/getting-started.md)。
 
-当前宿主保留 ASR 能力，但尚未开放语音输入按钮、账号配置页或设置跳转；注册表单不会自动显示，`settings.open()` 会返回入口不可用。Windows 保留 NSIS，本轮不开放系统原生识别；插件通过相同宿主接口接入，不能把接口存在当作真实账号识别已验收。
+当前宿主在插件页提供账号配置与设置跳转，应用语音设置负责选用；语音输入按钮的接入与真实设备验收独立进行。Windows 保留 NSIS，本轮不开放系统原生识别；插件通过相同宿主接口接入，不能把接口存在当作真实账号识别已验收。
 
 ## 注册与配置
 
@@ -16,11 +16,12 @@ context.settings.register({
   id: "asr",
   title: "识别账号",
   target: "asr",
-  component: RecognitionSettings,
+  models: [{ id: "recognition-model" }],
+  form: { groups: [{ title: "账号", fields: [{ key: "apiKey", label: "API Key", type: "secret" }] }] },
 });
 ```
 
-`createRecognition` 返回 `ASRInstance`，同步固定配置，不联网、不录音。配置表单接收 `PluginSettingsProps.asrConfig`（value、modelId、save）；用 `save(value, modelId)` 保存账号。保存不等于选用，用户需在宿主设置中明确选择，失败不回退到云端或其他账号。凭据不要写入 `context.storage`。
+`createRecognition` 返回 `ASRInstance`，同步固定配置，不联网、不录音。插件页由宿主渲染 form，并保存账号与模型；models 声明初始候选目录。保存不等于选用，用户需在宿主设置中明确选择，失败不回退到云端或其他账号。凭据不要写入 `context.storage`。
 
 ## 引擎契约
 

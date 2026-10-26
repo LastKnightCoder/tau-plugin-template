@@ -107,20 +107,20 @@ export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExte
 
 ### 元素声明
 
-| 字段                       | 说明                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------ |
-| `type`                     | 元素类型                                                                             |
-| `render`                   | 渲染组件，收到 `element`，返回 SVG 内容                                              |
-| `presentation`             | 可选。`label`（类型名）、`icon`（图标）、`getName(element)`（列表中显示的名称）      |
-| `create`                   | 可选。创建方式，声明后才能注册创建型工具，见[创建工具](#创建工具)                    |
-| `interaction`              | 可选。缩放手柄与连接点，见下文                                                       |
-| `schema`                   | 可选。约束 `data` 结构的 [Standard Schema](https://standardschema.dev)，必须同步校验 |
-| `dataVersion` | 必填正整数；表示业务数据版本，与插件发行版本分开 |
-| `collaboration.textFields` | 可选，data 中需要协作编辑的顶层字符串字段 |
-| `resources` | 可选，data 中资源位置的纯数据声明；不授予读取或上传权限 |
-| `previousVersions`、`migrations` | 可选，直接历史版本与纯业务载荷转换；加载不执行转换 |
-| `sketch`                   | 可选。为 `true` 时元素支持手绘画风，见[手绘画风](#手绘画风)                          |
-| `schematic`                | 可选。简略预览，见[简略预览](#简略预览)                                              |
+| 字段                             | 说明                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| `type`                           | 元素类型                                                                             |
+| `render`                         | 渲染组件，收到 `element`，返回 SVG 内容                                              |
+| `presentation`                   | 可选。`label`（类型名）、`icon`（图标）、`getName(element)`（列表中显示的名称）      |
+| `create`                         | 可选。创建方式，声明后才能注册创建型工具，见[创建工具](#创建工具)                    |
+| `interaction`                    | 可选。缩放手柄与连接点，见下文                                                       |
+| `schema`                         | 可选。约束 `data` 结构的 [Standard Schema](https://standardschema.dev)，必须同步校验 |
+| `dataVersion`                    | 必填正整数；表示业务数据版本，与插件发行版本分开                                     |
+| `collaboration.textFields`       | 可选，data 中需要协作编辑的顶层字符串字段                                            |
+| `resources`                      | 可选，data 中资源位置的纯数据声明；不授予读取或上传权限                              |
+| `previousVersions`、`migrations` | 可选，直接历史版本与纯业务载荷转换；加载不执行转换                                   |
+| `sketch`                         | 可选。为 `true` 时元素支持手绘画风，见[手绘画风](#手绘画风)                          |
+| `schematic`                      | 可选。简略预览，见[简略预览](#简略预览)                                              |
 
 用 `defineElement<TData>` 声明 `data` 的类型，或者传入 `schema` 让类型自动推断：
 
@@ -170,15 +170,17 @@ const sourceV2 = defineElement({
   dataVersion: 2,
   collaboration: { textFields: ["code"] },
   previousVersions: [{ element: sourceV1, access: "read" }],
-  migrations: [{
-    from: 1,
-    migrate(data) {
-      if (typeof data.source !== "string" || Object.hasOwn(data, "code"))
-        throw new Error("旧源码无效或目标字段已存在");
-      const { source, ...rest } = data;
-      return { ...rest, code: source };
+  migrations: [
+    {
+      from: 1,
+      migrate(data) {
+        if (typeof data.source !== "string" || Object.hasOwn(data, "code"))
+          throw new Error("旧源码无效或目标字段已存在");
+        const { source, ...rest } = data;
+        return { ...rest, code: source };
+      },
     },
-  }],
+  ],
 });
 ```
 
@@ -253,24 +255,30 @@ panel: ({ run }) => (
 
 通过 `api` 修改画布，不要直接修改读到的元素对象：
 
-| 方法                                      | 用途                                           |
-| ----------------------------------------- | ---------------------------------------------- |
-| `api.updateElement(id, patch)`            | 修改 name、完整 geometry、style                             |
-| `api.submit(commands, options?)`           | 提交 create/set_node/set_data/move_node/remove_nodes 身份命令 |
-| `api.select(ids)`                         | 设置选区                                       |
-| `api.getElement(id)`、`api.getSnapshot()` | 读取元素与画布快照                             |
-| `api.setActiveTool(id)`                   | 切换当前工具                                   |
-| `api.readonly`                            | 画布是否只读                                   |
+| 方法                                      | 用途                                                          |
+| ----------------------------------------- | ------------------------------------------------------------- |
+| `api.updateElement(id, patch)`            | 修改 name、完整 geometry、style                               |
+| `api.submit(commands, options?)`          | 提交 create/set_node/set_data/move_node/remove_nodes 身份命令 |
+| `api.select(ids)`                         | 设置选区                                                      |
+| `api.getElement(id)`、`api.getSnapshot()` | 读取元素与画布快照                                            |
+| `api.setActiveTool(id)`                   | 切换当前工具                                                  |
+| `api.readonly`                            | 画布是否只读                                                  |
 
 普通业务属性使用 `api.updateElementData(id, patch, { unset?, historyGroup? })`，未指定字段保留；文本字段使用 `api.getTextBinding(id, field)` 的观察修订与增量编辑，不通过普通 patch 覆盖。
 
 ```ts
 const pageId = api.getSnapshot().pageId;
-const { createdIds } = api.submit([{
-  type: "create",
-  element: { type: BOX, data: {}, geometry: { x: 20, y: 20, width: 120, height: 80, rotation: 0 } },
-  parent: { kind: "page", id: pageId },
-}]);
+const { createdIds } = api.submit([
+  {
+    type: "create",
+    element: {
+      type: BOX,
+      data: {},
+      geometry: { x: 20, y: 20, width: 120, height: 80, rotation: 0 },
+    },
+    parent: { kind: "page", id: pageId },
+  },
+]);
 api.updateElementData(createdIds[0], { label: "方块" });
 ```
 

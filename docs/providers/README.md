@@ -4,13 +4,13 @@ Tau 的一些功能允许用户选择背后的服务：同步到哪个存储、�
 
 | 提供方                 | 接入后用户可以                           | 配置界面出现在               |
 | ---------------------- | ---------------------------------------- | ---------------------------- |
-| [同步存储](sync.md)    | 把笔记库同步到你接入的存储服务           | 设置 · 同步                  |
-| [资源上传](upload.md)  | 把编辑器里的图片、附件上传到你接入的存储 | 设置 · 资源存储              |
-| [语音识别](asr.md) | 将语音转为输入草稿 | 设置 · 语音输入 |
-| [语音合成](tts.md)     | 用你接入的服务朗读、生成播客、复刻音色   | 设置 · 语音                  |
-| [图片生成](images.md)  | 用你接入的模型生成和编辑图片             | 设置 · 图片生成              |
-| [视频来源](video.md)   | 从你接入的视频网站或服务添加视频         | 设置 · 账号与连接 · 在线视频 |
-| [博客发布](publish.md) | 把博客发布到你接入的目标                 | 发布 · 站点设置 · 发布目标   |
+| [同步存储](sync.md)    | 把笔记库同步到你接入的存储服务           | 插件详情 · 设置（声明式表单） |
+| [资源上传](upload.md)  | 把编辑器里的图片、附件上传到你接入的存储 | 插件详情 · 设置（声明式表单） |
+| [语音识别](asr.md) | 将语音转为输入草稿 | 插件详情 · 设置 |
+| [语音合成](tts.md)     | 用你接入的服务朗读、生成播客、复刻音色   | 插件详情 · 设置                  |
+| [图片生成](images.md)  | 用你接入的模型生成和编辑图片             | 插件详情 · 设置              |
+| [视频来源](video.md)   | 从你接入的视频网站或服务添加视频         | 插件详情 · 设置 |
+| [博客发布](publish.md) | 把博客发布到你接入的目标                 | 插件详情 · 设置   |
 
 ## 共同的模式
 
@@ -44,32 +44,32 @@ context.sync.register({
 
 ### 2. 注册配置表单
 
-用户需要填写账号、地址等配置。用 `context.settings.register` 注册一个带 `target` 的设置区域，它会出现在对应功能的设置里，而不是插件详情页：
+用户在插件详情 › 设置中管理连接信息，应用设置只负责选用。sync、upload、tts、asr、images、video、publish 均可声明 form，由宿主统一渲染、显式保存；models 可声明新账号的初始模型目录。字段与 beforeSave 用法见 [同步存储](sync.md#配置表单)。扫码登录、目录授权等专用交互仍可声明组件，同样在插件页承载：
 
 ```tsx
 import type { PluginSettingsProps } from "@tau/plugins";
 
-function UploadSettings({ uploadConfig }: PluginSettingsProps) {
-  if (!uploadConfig) return null;
-  const initial = parseConfig(uploadConfig.value);
+function VideoSettings({ videoConfig }: PluginSettingsProps) {
+  if (!videoConfig) return null;
+  const initial = parseConfig(videoConfig.value);
   // 表单...
   async function save(next: MyConfig) {
-    await uploadConfig.save(next);
+    await videoConfig.save(next);
   }
 }
 
 context.settings.register({
-  id: "upload",
-  title: "我的图床",
-  target: "upload",
-  component: UploadSettings,
+  id: "video",
+  title: "我的视频源",
+  target: "video",
+  component: VideoSettings,
 });
 ```
 
 | `target`  | 组件收到的配置属性 | 保存方法               |
 | --------- | ------------------ | ---------------------- |
-| `sync`    | `syncConfig`       | `save(value)`          |
-| `upload`  | `uploadConfig`     | `save(value)`          |
+| `sync`    | 声明 `form`，无组件 | Tau 保存              |
+| `upload`  | 声明 `form`，无组件 | Tau 保存              |
 | `asr` | `asrConfig` | `save(value, modelId)` |
 | `tts`     | `ttsConfig`        | `save(value, models)`  |
 | `images`  | `imageConfig`      | `save(value, modelId)` |
@@ -79,11 +79,11 @@ context.settings.register({
 - 配置属性是可选的，使用前先检查是否存在。
 - `value` 是之前保存的 JSON 值，用户还没保存过时可能为空。读取后自己校验结构，缺失的字段用默认值。
 - `save` 表达保存配置意图，持久化、选用与确认由宿主处理；两端不新增不同的作者接口。失败时保留用户输入，成功后再提示已保存。
-- 同步、上传分别声明 sync/upload 和 fetch；两端可保留独立 UI，共用配置与业务代码。账号归各插件独立配置，不做统一共享。
+- 普通连接字段声明 form，两端共用配置与业务代码。账号归各插件独立配置，不做统一共享。
 - 配置由 Tau 保存，**不要再存一份到 `context.storage`**：`storage` 会随笔记库同步，不适合放凭据。
 - `create(config)` 收到的就是这里保存的值。
 
-注册后，插件详情页会提供跳转到这个配置表单的入口，`register` 返回的句柄的 `open()` 也会跳转过去。
+`register` 返回的句柄的 `open()` 打开该插件的设置分区；保存配置不会自动选用服务。
 
 ### 3. 网络请求与取消
 

@@ -119,7 +119,7 @@ context.settings.register({
   id: "publish",
   title: "我的存储",
   target: "publish",
-  component: PublishSettings,
+  form: { groups: [{ title: "账号", fields: [{ key: "token", label: "Token", type: "secret" }] }] },
 });
 ```
 
@@ -142,3 +142,5 @@ context.settings.register({
 ## 测试清单
 
 用真实的远端验证成功之后，再声称支持该目标。至少覆盖：配置保存失败、连接失败、重复发布、远端文件已存在或已删除、用户取消、插件停用、切换工作区，以及快照提交中途失败后的重试。
+
+连接配置在插件页显式保存，博客发布页只选择目标与站点参数。扫码或目录授权等特殊交互可保留 component；保存配置不改变当前发布目标。

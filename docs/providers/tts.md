@@ -34,44 +34,15 @@ context.tts.register({
 
 ```ts
 context.settings.register({
-  id: "tts",
-  title: "我的语音服务",
-  target: "tts",
-  component: TTSSettings,
+  id: "tts", title: "我的语音服务", target: "tts",
+  models: [{ id: "speech-model" }],
+  form: { groups: [{ title: "账号", fields: [
+    { key: "apiKey", label: "API Key", type: "secret" },
+    { key: "baseUrl", label: "服务地址", type: "url", optional: true },
+  ] }] },
 });
 ```
 
-组件收到 `ttsConfig`：
+桌面与移动均由宿主在插件页管理多个账号、凭据与模型。models 只提供新账号的初始目录，不覆盖已保存的自定义模型。应用语音设置选择当前账号、模型与音色并提供试听；保存配置不改变当前服务。字段、校验与 beforeSave 用法见[同步配置](sync.md)。
 
-| 字段                  | 说明                                   |
-| --------------------- | -------------------------------------- |
-| `instanceId`          | 正在编辑的账号 ID                      |
-| `value`               | 这个账号的配置                         |
-| `models`              | 这个账号的模型列表，`{ id, label? }[]` |
-| `save(value, models)` | 保存这个账号的配置和模型列表           |
-
-- 表单只编辑当前这一个账号，不要影响同插件的其他账号，也不要把它设为默认。
-- 模型列表由你的表单提供，可以允许用户填写自定义模型。
-
-## 手机端
-
-手机端（0.2.7 起）使用同一套 `context.tts` 和 `ttsConfig`。账号名称、模型管理、当前音色、试听和音色复刻都由 Tau 的「我的 → 语音 → 语音合成」提供，你的表单只需要编辑凭据等服务商参数。
-
-桌面表单的布局放进手机往往太挤，可以按平台渲染不同组件：
-
-```tsx
-function TTSSettingsView(props: PluginSettingsProps) {
-  const { platform } = usePluginEnvironment();
-  return platform === "desktop" ? <TTSSettings {...props} /> : <MobileTTSSettings {...props} />;
-}
-```
-
-同时在 `manifest.json` 的 `targets` 里声明 `android`、`ios`。
-
-## 上传参考音频
-
-服务需要参考音频的公开地址时，用 `context.upload.uploadRemote(file, { signal })` 上传，它使用用户选择的上传配置，见[资源上传](upload.md#在其他功能中使用上传)。不要自己选择用户的上传插件或读取上传凭据。服务商自带文件上传接口的，直接用服务商的接口即可。
-
-## 职责划分
-
-音频的播放、拼接和保存由 Tau 负责，插件只负责调用服务商接口，不直接写笔记或文件。
+特殊交互可继续使用 component，接收 ttsConfig（instanceId、value、models、save）；组件只编辑当前账号，不能改其他账号或默认服务。

@@ -58,7 +58,10 @@ return <textarea ref={source.inputRef} defaultValue={source.value} readOnly={sou
 
 ```tsx
 import {
-  definePlugin, defineEditorExtension, defineEditorElement, SourceBlockEditor,
+  definePlugin,
+  defineEditorExtension,
+  defineEditorElement,
+  SourceBlockEditor,
   type EditorElementRenderProps,
 } from "@tau/plugins";
 import { Code } from "lucide-react";
@@ -83,51 +86,89 @@ declare module "@tau/plugins" {
 declare const __PLUGIN_META__: { id: string; name: string; version: string };
 
 function DiagramV1View({ attributes, element, children }: EditorElementRenderProps<DiagramV1>) {
-  return <div {...attributes}>
-    <SourceBlockEditor element={element} field="source" mode="text" title={element.title ?? "图表"} icon={Code}>
-      <pre contentEditable={false}>{element.source}</pre>{children}
-    </SourceBlockEditor>
-  </div>;
+  return (
+    <div {...attributes}>
+      <SourceBlockEditor
+        element={element}
+        field="source"
+        mode="text"
+        title={element.title ?? "图表"}
+        icon={Code}
+      >
+        <pre contentEditable={false}>{element.source}</pre>
+        {children}
+      </SourceBlockEditor>
+    </div>
+  );
 }
 function DiagramV2View({ attributes, element, children }: EditorElementRenderProps<DiagramV2>) {
-  return <div {...attributes}>
-    <SourceBlockEditor element={element} field="code" mode="text" title={element.title ?? "图表"} icon={Code}>
-      <pre contentEditable={false}>{element.code}</pre>{children}
-    </SourceBlockEditor>
-  </div>;
+  return (
+    <div {...attributes}>
+      <SourceBlockEditor
+        element={element}
+        field="code"
+        mode="text"
+        title={element.title ?? "图表"}
+        icon={Code}
+      >
+        <pre contentEditable={false}>{element.code}</pre>
+        {children}
+      </SourceBlockEditor>
+    </div>
+  );
 }
 
 const v1 = defineEditorElement<DiagramV1>({
-  type: "example.diagram", dataVersion: 1, kind: "block", isVoid: true,
-  collaboration: { textFields: ["source"] }, render: DiagramV1View,
+  type: "example.diagram",
+  dataVersion: 1,
+  kind: "block",
+  isVoid: true,
+  collaboration: { textFields: ["source"] },
+  render: DiagramV1View,
 });
 const v2 = defineEditorElement<DiagramV2>({
-  type: "example.diagram", dataVersion: 2, kind: "block", isVoid: true,
-  collaboration: { textFields: ["code"] }, render: DiagramV2View,
+  type: "example.diagram",
+  dataVersion: 2,
+  kind: "block",
+  isVoid: true,
+  collaboration: { textFields: ["code"] },
+  render: DiagramV2View,
   previousVersions: [{ element: v1, access: "edit" }],
-  migrations: [{ from: 1, migrate(data) {
-    if (typeof data.source !== "string") throw new Error("旧版源码字段无效");
-    if (Object.hasOwn(data, "code")) throw new Error("目标字段已存在，请保留两份内容后处理");
-    const { source, ...rest } = data;
-    return { ...rest, code: source };
-  } }],
+  migrations: [
+    {
+      from: 1,
+      migrate(data) {
+        if (typeof data.source !== "string") throw new Error("旧版源码字段无效");
+        if (Object.hasOwn(data, "code")) throw new Error("目标字段已存在，请保留两份内容后处理");
+        const { source, ...rest } = data;
+        return { ...rest, code: source };
+      },
+    },
+  ],
 });
 
 export default definePlugin({
   ...__PLUGIN_META__,
-  editorExtensions: [defineEditorExtension({
-    id: "example.diagram",
-    elements: [v2],
-    blockPanel: [{
-      icon: Code,
-      title: "源码图表",
-      description: "插入可协作编辑的源码图表",
-      keywords: ["图表", "源码"],
-      onClick: editor => editor.insertNode({
-        type: "example.diagram", code: "", children: [{ type: "formatted", text: "" }],
-      }),
-    }],
-  })],
+  editorExtensions: [
+    defineEditorExtension({
+      id: "example.diagram",
+      elements: [v2],
+      blockPanel: [
+        {
+          icon: Code,
+          title: "源码图表",
+          description: "插入可协作编辑的源码图表",
+          keywords: ["图表", "源码"],
+          onClick: editor =>
+            editor.insertNode({
+              type: "example.diagram",
+              code: "",
+              children: [{ type: "formatted", text: "" }],
+            }),
+        },
+      ],
+    }),
+  ],
 });
 ```
 
