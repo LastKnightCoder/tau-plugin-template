@@ -102,8 +102,14 @@ context.settings.register({
 | `url`           | 地址                                                                 |
 | `choice`        | 固定选项，`default` 为缺省值                                         |
 | `remote-choice` | 按已填的值远程加载选项（如仓库、分支），`dependsOn` 中的字段变化时清空 |
+| `switch`        | 开关，值为 `"true"` / `"false"`，`default` 为布尔；不参与必填校验       |
+| `service-choice` | 由宿主服务选择（目前为 `git.cacheDirectory`，仅桌面），值与 `labelKey` 显示名一起保存；留空即宿主默认 |
 
 - 未标 `optional` 的字段都是必填，空值时 Tau 拒绝保存并标在字段上；「可选」由 Tau 显示，不要写进 label。
+- 选项可带 `description`：手机上少量（≤3）带说明的选项平铺为整行单选，桌面在字段说明里显示当前选项的说明。
+- 分组可带 `link: { label, url }`（仅 https），用于服务商控制台等外部链接。
+- 字段可带 `visibleWhen: { key, equals }`，只在另一字段取该值时显示；隐藏时不参与必填校验，已存值保留。
+- `beforeSave` 抛出 `ProviderFieldError(key, message)` 时，错误标在对应字段；其他错误显示在保存结果中。
 - `summary: true` 的字段按顺序拼成服务列表里的摘要，例如「tau-sync · ap-southeast-1」。
 - 配置值一律是字符串；保存时与已存配置合并，未声明的键原样保留。
 - 保存不会改变用户当前选用的服务；选用由用户在设置页或插件设置页单独操作。

@@ -2,7 +2,7 @@
 
 使用 SDK 0.43.0，目标最低桌面 0.59.5、Android/iOS 0.2.7。宿主版本与 SDK 的正式发布状态分开检查。模板当前依赖与正式安装流程见[快速开始](/docs/getting-started.md)。
 
-当前宿主在插件页提供账号配置与设置跳转，应用语音设置负责选用；语音输入按钮的接入与真实设备验收独立进行。Windows 保留 NSIS，本轮不开放系统原生识别；插件通过相同宿主接口接入，不能把接口存在当作真实账号识别已验收。
+账号配置在应用的语音输入设置中由宿主按 form 渲染（桌面 设置 › 语音 › 语音输入，手机 我的 › 语音 › 语音输入），选用也在同一页；插件详情 › 设置 只给跳转。语音输入按钮的接入与真实设备验收独立进行。Windows 保留 NSIS，本轮不开放系统原生识别；插件通过相同宿主接口接入，不能把接口存在当作真实账号识别已验收。
 
 ## 注册与配置
 
@@ -17,7 +17,13 @@ context.settings.register({
   title: "识别账号",
   target: "asr",
   models: [{ id: "recognition-model" }],
-  form: { groups: [{ title: "账号", fields: [{ key: "apiKey", label: "API Key", type: "secret" }] }] },
+  form: {
+    groups: [{
+      title: "账号",
+      link: { label: "控制台", url: "https://example.com/console" },
+      fields: [{ key: "apiKey", label: "API Key", type: "secret" }],
+    }],
+  },
 });
 ```
 
