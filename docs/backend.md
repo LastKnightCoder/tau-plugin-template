@@ -1,6 +1,6 @@
 # 本机后台
 
-插件的界面代码运行在浏览器环境中，不能使用 Node.js。需要读写本机文件、连接本机设备、调用命令行程序时，给插件加一个**本机后台**：一段在独立 Node.js 进程中运行的代码，界面通过消息调用它。
+插件的界面代码运行在浏览器环境中，不能使用 Node.js。在桌面上需要读写本机文件、连接本机设备、调用命令行程序时，给插件加一个**本机后台**：一段在独立 Node.js 进程中运行的代码，界面通过消息调用它。
 
 后台是一个比较重的能力：用户首次运行前需要授权，插件中心也会对带后台的每个版本重点审核。只在浏览器能力确实不够时使用。
 
@@ -8,13 +8,20 @@
 
 ### 1. 修改 manifest
 
-把 `formatVersion` 改为 `2`，并加上 `backend`：
+带后台的插件使用桌面专用的包格式：删掉 `targets`，改写成下面的样子，并加上 `backend`：
 
 ```json
 {
+  "id": "yourname.device-status",
+  "name": "设备状态",
+  "description": "在页面里显示本机设备的状态。",
+  "version": "1.0.0",
   "formatVersion": 2,
-  "minAppVersion": "0.59.0",
+  "apiVersion": 1,
+  "platform": "desktop",
+  "format": "cjs",
   "main": "main.js",
+  "minAppVersion": "0.59.0",
   "backend": {
     "entry": "backend.js",
     "runtime": "node",
@@ -28,7 +35,7 @@
 }
 ```
 
-带后台的插件必须声明 `minAppVersion`。这里只列出相关字段，其余字段与普通插件相同。
+`formatVersion`、`apiVersion`、`platform`、`format`、`main` 照抄上面的值。`minAppVersion` 是最低桌面版本，必填。这类插件只能安装在桌面上。
 
 | 字段                    | 说明                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -84,7 +91,7 @@ export default defineBackend({
               },
             },
           },
-          () => platform()
+          () => platform(),
         );
       },
     };
@@ -138,7 +145,9 @@ const os = await context.backend.call("system.platform", null, { signal });
 声明工具后，在后台中调用：
 
 ```ts
-const result = await ctx.process.run("git", ["status", "--short"], { signal: request.signal });
+const result = await ctx.process.run("git", ["status", "--short"], {
+  signal: request.signal,
+});
 // result.exitCode、result.stdout、result.stderr
 ```
 

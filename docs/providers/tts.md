@@ -10,7 +10,8 @@
 context.tts.register({
   id: context.pluginId,
   name: "我的语音服务",
-  create: (config, modelId) => createVoiceService(context, parseConfig(config), modelId),
+  create: (config, modelId) =>
+    createVoiceService(context, parseConfig(config), modelId),
 });
 ```
 
@@ -34,15 +35,28 @@ context.tts.register({
 
 ```ts
 context.settings.register({
-  id: "tts", title: "我的语音服务", target: "tts",
+  id: "tts",
+  title: "我的语音服务",
+  target: "tts",
   models: [{ id: "speech-model" }],
-  form: { groups: [{ title: "账号", fields: [
-    { key: "apiKey", label: "API Key", type: "secret" },
-    { key: "baseUrl", label: "服务地址", type: "url", optional: true },
-  ] }] },
+  form: {
+    groups: [
+      {
+        title: "账号",
+        fields: [
+          { key: "apiKey", label: "API Key", type: "secret" },
+          { key: "baseUrl", label: "服务地址", type: "url", optional: true },
+        ],
+      },
+    ],
+  },
 });
 ```
 
-桌面与移动均由宿主在插件页管理多个账号、凭据与模型。models 只提供新账号的初始目录，不覆盖已保存的自定义模型。应用语音设置选择当前账号、模型与音色并提供试听；保存配置不改变当前服务。字段、校验与 beforeSave 用法见[同步配置](sync.md)。
+用户可以在插件详情的「设置」里添加多个账号，每个账号有自己的凭据和模型列表；`models` 是新账号的初始模型列表，不会覆盖用户已经添加的模型。在「设置 › 语音」里选用哪个账号、模型和音色，并试听。字段写法见[同步存储 · 配置表单](sync.md#配置表单)。
 
-特殊交互可继续使用 component，接收 ttsConfig（instanceId、value、models、save）；组件只编辑当前账号，不能改其他账号或默认服务。
+需要特殊交互时改用组件，组件收到 `ttsConfig`（`instanceId`、`value`、`models`、`save`），只能编辑当前这一个账号。
+
+## 复刻音色需要公网地址时
+
+有些服务复刻音色时要求提供参考音频的公网地址。用 `context.upload.uploadRemote(file, signal)` 把文件上传到用户当前选用的远端存储，拿到地址。用户的资源存储是「本地保存」时它会报错，把这个错误提示给用户，不要伪造地址。

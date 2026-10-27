@@ -12,12 +12,18 @@ context.upload.register({
   name: "我的图床",
   async upload(file, config, signal) {
     const settings = parseConfig(config);
-    const response = await context.fetch(`${settings.endpoint}/${encodeURIComponent(file.name)}`, {
-      method: "PUT",
-      headers: { "Content-Type": file.mimeType, Authorization: `Bearer ${settings.token}` },
-      body: file.content,
-      signal,
-    });
+    const response = await context.fetch(
+      `${settings.endpoint}/${encodeURIComponent(file.name)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.mimeType,
+          Authorization: `Bearer ${settings.token}`,
+        },
+        body: file.content,
+        signal,
+      },
+    );
     if (!response.ok) throw new Error(`上传失败：${response.status}`);
     return `${settings.publicBaseUrl}/${encodeURIComponent(file.name)}`;
   },
@@ -62,13 +68,22 @@ context.settings.register({
         title: "存储位置",
         fields: [
           { key: "bucket", label: "Bucket", type: "text", summary: true },
-          { key: "prefix", label: "目录", type: "text", optional: true, placeholder: "uploads" },
+          {
+            key: "prefix",
+            label: "目录",
+            type: "text",
+            optional: true,
+            placeholder: "uploads",
+          },
           {
             key: "style",
             label: "地址模式",
             type: "choice",
             default: "path",
-            options: [{ value: "path", label: "路径模式" }, { value: "host", label: "虚拟主机模式" }],
+            options: [
+              { value: "path", label: "路径模式" },
+              { value: "host", label: "虚拟主机模式" },
+            ],
           },
         ],
       },
@@ -79,12 +94,12 @@ context.settings.register({
 });
 ```
 
-| 字段类型        | 用途                                                                 |
-| --------------- | -------------------------------------------------------------------- |
-| `text`          | 普通文本                                                             |
-| `secret`        | 密钥、令牌、密码；不能作摘要                                         |
-| `url`           | 地址                                                                 |
-| `choice`        | 固定选项，`default` 为缺省值                                         |
+| 字段类型        | 用途                                                                   |
+| --------------- | ---------------------------------------------------------------------- |
+| `text`          | 普通文本                                                               |
+| `secret`        | 密钥、令牌、密码；不能作摘要                                           |
+| `url`           | 地址                                                                   |
+| `choice`        | 固定选项，`default` 为缺省值                                           |
 | `remote-choice` | 按已填的值远程加载选项（如仓库、分支），`dependsOn` 中的字段变化时清空 |
 
 - 未标 `optional` 的字段都是必填，空值时 Tau 拒绝保存并标在字段上；「可选」由 Tau 显示，不要写进 label。
@@ -103,7 +118,7 @@ Tau 负责图片压缩、文件命名、本地保存和多窗口之间的转发�
 ```ts
 const url = await context.upload.uploadRemote(
   { name: "sample.mp3", mimeType: "audio/mpeg", content: bytes },
-  { signal }
+  { signal },
 );
 ```
 

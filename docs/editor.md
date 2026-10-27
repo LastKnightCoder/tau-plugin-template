@@ -1,18 +1,18 @@
 # 编辑器扩展
 
-编辑器扩展让你在 Tau 文档中添加自定义块。跨端使用静态 editorExtensions/editorCodecs，移动普通正文提供触摸插入、标准块操作与源码编辑；动态 context.editor.register 只在桌面工作台适用。桌面拖拽和旧内容插件博客发布不能推断为格式 3 移动长按拖拽或博客分发已经接入，详见 [API 支持矩阵](api-support.md)。
-
-这一篇先用一个完整的例子走一遍，再逐项介绍扩展能声明的内容。
+在 Tau 的文档里加一种自己的块：图表、公式、乐谱、可交互的组件。块的数据随文档保存、同步和发布，桌面、手机和用户发布的博客使用同一份渲染代码。
 
 ## 第一个块：计数器
-
-正文节点在 editorExtensions 中注册，Markdown 转换在 editorCodecs 中注册。宿主据此装配正文、源码编辑和样式编译；manifest 不重复登记节点、等级或能力。targets 只声明已完整适配的平台及最低客户端版本。
 
 ### 1. 定义节点和扩展
 
 ```tsx
 import { useState } from "react";
-import { definePlugin, defineEditorElement, defineEditorExtension } from "@tau/plugins";
+import {
+  definePlugin,
+  defineEditorElement,
+  defineEditorExtension,
+} from "@tau/plugins";
 
 declare const __PLUGIN_META__: { id: string; name: string; version: string };
 
@@ -34,7 +34,10 @@ function Counter({ initial }: { initial: number }) {
   const [count, setCount] = useState(initial);
   return (
     <div className="yourname-counter" contentEditable={false}>
-      <button onMouseDown={event => event.preventDefault()} onClick={() => setCount(n => n + 1)}>
+      <button
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setCount((n) => n + 1)}
+      >
         计数：{count}
       </button>
     </div>
@@ -81,7 +84,7 @@ export default definePlugin({
           title: "计数器",
           keywords: ["counter", "计数"],
           description: "一个可以点击计数的块",
-          onClick: editor =>
+          onClick: (editor) =>
             editor.insertNode({
               type: "yourname.counter",
               initial: 0,
@@ -156,7 +159,7 @@ function Counter({ element }: { element: CounterElement }) {
   const { update } = useElement(element);
   return (
     <button
-      onMouseDown={event => event.preventDefault()}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={() => update({ initial: element.initial + 1 })}
     >
       计数：{element.initial}
@@ -206,7 +209,12 @@ defineEditorElement({
 选中块后浮在块上方的属性条，用 `BlockToolbar`、`BlockToolbarButton`、`BlockToolbarGap` 组成，外观和 Tau 自带的图片块一致。上方放不下时自动翻到下方，点击按钮不会让编辑器失去光标。
 
 ```tsx
-import { BlockToolbar, BlockToolbarButton, BlockToolbarGap, useElement } from "@tau/plugins";
+import {
+  BlockToolbar,
+  BlockToolbarButton,
+  BlockToolbarGap,
+  useElement,
+} from "@tau/plugins";
 
 function Chart({ element }: { element: ChartElement }) {
   const { selected, readOnly, update, openMenu } = useElement(element);
@@ -224,7 +232,7 @@ function Chart({ element }: { element: ChartElement }) {
           <BlockToolbarButton
             title="更多"
             icon={<MoreHorizontal size={15} />}
-            onClick={event => {
+            onClick={(event) => {
               const rect = event.currentTarget.getBoundingClientRect();
               openMenu({ x: rect.left, y: rect.bottom + 6 });
             }}
@@ -292,7 +300,13 @@ defineEditorExtension({
     },
   ],
   hotkeys: [{ key: "mod+shift+0", command: "yourname.counter.reset" }],
-  menu: [{ id: "yourname.counter.reset", title: "重置计数", command: "yourname.counter.reset" }],
+  menu: [
+    {
+      id: "yourname.counter.reset",
+      title: "重置计数",
+      command: "yourname.counter.reset",
+    },
+  ],
 });
 ```
 
@@ -358,12 +372,10 @@ behaviorsFor: {
 
 ## 块会在哪里显示
 
-你的块会出现在两个地方：
-
-- **Tau 桌面端**的编辑器。
+- **Tau 桌面端和手机**的编辑器。插件声明了 `android`、`ios` 时，手机上安装插件后就能插入和编辑你的块，触摸上的适配见[多端适配 · 编辑器块](portability.md#编辑器块)。
 - **用户发布的博客**。博客使用同一个 `render` 组件，你不需要另写一份。
 
-移动端和浏览器扩展不运行插件，遇到你的块时保留数据，并显示一个通用的占位。
+没有安装插件的设备和浏览器扩展里，块的数据原样保留，显示为一个通用的占位。
 
 因为同一份代码要在博客里运行，渲染相关的代码需要满足：
 
@@ -404,10 +416,13 @@ export default definePlugin({
       type: "yourname.counter",
       isVoid: true,
       // 导出：节点 → Markdown
-      serializer: { toMarkdown: element => `::yourname-counter{initial=${element.initial}}` },
+      serializer: {
+        toMarkdown: (element) =>
+          `::yourname-counter{initial=${element.initial}}`,
+      },
       // 导入：Markdown → 节点
       directives: {
-        "yourname-counter": attributes => ({
+        "yourname-counter": (attributes) => ({
           type: "yourname.counter",
           initial: Number(attributes.initial) || 0,
           children: [{ type: "formatted", text: "" }],
@@ -444,9 +459,21 @@ interface DiagramElement {
   children: { type: "formatted"; text: string }[];
 }
 
-function DiagramBlock({ element, children }: { element: DiagramElement; children: ReactNode }) {
+function DiagramBlock({
+  element,
+  children,
+}: {
+  element: DiagramElement;
+  children: ReactNode;
+}) {
   return (
-    <SourceBlockEditor element={element} field="content" mode="javascript" title="图表" icon={Code}>
+    <SourceBlockEditor
+      element={element}
+      field="content"
+      mode="javascript"
+      title="图表"
+      icon={Code}
+    >
       <DiagramPreview source={element.content} />
       {children}
     </SourceBlockEditor>
@@ -460,7 +487,7 @@ export const diagramElement = defineEditorElement<DiagramElement>({
   collaboration: { textFields: ["content"] },
   kind: "block",
   isVoid: true,
-  render: props => <DiagramBlock {...props} />,
+  render: (props) => <DiagramBlock {...props} />,
 });
 ```
 
@@ -504,7 +531,7 @@ export const diagramElement = defineEditorElement<DiagramElement>({
 
 ## 图片、视频与音频
 
-节点里存的图片、视频、音频地址可能是本地路径、远程地址或共享文档里的资源，不能直接交给 `<img>`。用宿主的媒体组件显示，解析方式与 Tau 自带的图片块相同：本地路径转成可加载的地址，远程资源按用户的缓存设置下载，共享文档里的资源经协作服务解析。
+节点里存的图片、视频、音频地址可能是本地路径、远程地址或共享文档里的资源，不能直接交给 `<img>`。用 Tau 提供的媒体组件显示，解析方式与 Tau 自带的图片块相同：本地路径转成可加载的地址，远程资源按用户的缓存设置下载，共享文档里的资源经协作服务解析。
 
 ```tsx
 import { MediaImage, useMediaAppearance } from "@tau/plugins";
@@ -512,7 +539,10 @@ import { MediaImage, useMediaAppearance } from "@tau/plugins";
 function Photo({ element }: { element: PhotoElement }) {
   const appearance = useMediaAppearance();
   return (
-    <figure contentEditable={false} data-radius={element.borderRadius ?? appearance?.borderRadius}>
+    <figure
+      contentEditable={false}
+      data-radius={element.borderRadius ?? appearance?.borderRadius}
+    >
       <MediaImage url={element.url} alt={element.caption} />
     </figure>
   );
@@ -522,7 +552,7 @@ function Photo({ element }: { element: PhotoElement }) {
 | 接口                         | 用途                                                                                                                   |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `MediaImage`                 | 显示图片，参数为 `url`、`alt`、`className`、`style`、`loading`、`onLoadError` 等                                       |
-| `MediaVideo` / `MediaAudio`  | 宿主的视频、音频播放器，参数为 `src` 与原生媒体属性                                                                    |
+| `MediaVideo` / `MediaAudio`  | Tau 的视频、音频播放器，参数为 `src` 与原生媒体属性                                                                    |
 | `useResource(url, { kind })` | 自己绘制时使用：返回 `src`、`status`（`loading` / `ready` / `error`）与 `retry()`，元素加载失败时调用 `retry` 重新解析 |
 | `useResourceUpload()`        | 返回上传函数，把用户选的文件存进当前的资源存储并返回可写入节点的地址；只读编辑器和博客里为 `undefined`                 |
 | `useMediaAppearance()`       | 用户设置的媒体默认圆角与阴影（`none` / `sm` / `md` / `lg`）；博客里取发布设置。节点自己有设置时以节点为准              |
@@ -548,7 +578,9 @@ defineEditorElement({
   kind: "block",
   isVoid: true,
   render: Gallery,
-  resources: [{ path: "images[].url", kind: "image", alt: "desc", caption: "desc" }],
+  resources: [
+    { path: "images[].url", kind: "image", alt: "desc", caption: "desc" },
+  ],
 });
 ```
 
@@ -564,7 +596,7 @@ defineEditorElement({
 
 ### 完整示例：图册
 
-[图册插件](https://github.com/LastKnightCoder/tau-plugin-image-gallery)把这一篇里的能力组合成了一个完整的媒体块，可以对照它的源码写自己的块：
+[图册插件](https://github.com/LastKnightCoder/tau-plugin-image-gallery)把下面这些能力组合成了一个完整的媒体块，可以对照它的源码写自己的块：
 
 | 需要                     | 图册的做法                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------- |
@@ -622,7 +654,7 @@ defineEditorExtension({
   htmlSerializers: [
     {
       type: "yourname.counter",
-      toHtml: element => `<p>计数：${Number(element.initial)}</p>`,
+      toHtml: (element) => `<p>计数：${Number(element.initial)}</p>`,
     },
   ],
 });
@@ -630,6 +662,40 @@ defineEditorExtension({
 
 `toHtml` 返回 HTML 字符串，文本内容要自己转义。它只用于静态导出，博客里的显示仍然使用 `render`。
 
-## 正文字数与空文档
+## 字数统计
 
-自定义节点通过 SDK 0.44.0 的 `editorMetrics` 声明哪些字段参与统计，与 `editorExtensions`、`editorCodecs` 一起静态导出。代码示例、数组字段、容器遍历与空文档边界见[正文字数协议](content-metrics.md)。
+Tau 统计正文字数时，会自动计入普通段落和 `children` 里的文字。块的文字存在自定义字段里（如题目、源码）时，在插件定义上用 `editorMetrics` 声明哪些字段计入字数：
+
+```ts
+import type { EditorMetricRule } from "@tau/plugins";
+
+const editorMetrics = [
+  { type: "yourname.quiz", textFields: ["question", "answers[].text"] },
+  { type: "yourname.photo", textFields: [] },
+] as const satisfies readonly EditorMetricRule[];
+
+export default definePlugin({
+  ...__PLUGIN_META__,
+  editorExtensions,
+  editorMetrics,
+});
+```
+
+- `textFields` 里写字段路径，`answers[].text` 表示 `answers` 数组每一项的 `text`。缺失或不是字符串的字段不计数。题目「天空是什么颜色」、答案「蓝色」合计 9 字。
+- 只声明正文，不声明 ID、地址、编译结果这类字段。纯图片这类没有文字的块写 `textFields: []`。
+- `children` 里的文字已经自动计入，不要再声明 `children[].text`，否则会重复统计。
+- 只能声明本插件的节点类型，每个类型声明一次。规则是纯数据，不能写函数。
+
+正文不在 `children` 里、而在别的字段里放着一组子节点时（如折叠列表把隐藏的内容放在 `allContent`），用 `additionalChildren` 告诉 Tau 去哪里找：
+
+```ts
+{
+  type: "yourname.folded-list",
+  textFields: [],
+  additionalChildren: [{ path: "allContent", when: "isFold", skip: 1 }],
+}
+```
+
+`path` 是子节点或子节点数组所在的字段；`when` 指定一个布尔字段，为 `true` 时才计入；`skip` 跳过开头几项。新设计的块尽量把正文都放进 `children`，用不到这项。
+
+字数为 0 不代表文档是空的：只有图片、分割线的文档字数也是 0。不要用字数判断一篇正文能否删除或复用。块内按退格、方向键时怎样算「空块」，由节点声明的 `isEmpty` 决定，与字数统计无关。

@@ -1,6 +1,6 @@
 # 编译与转换服务
 
-`context.services` 提供几种由 Tau 执行的编译与转换能力：
+把 Tailwind 编译、Markdown 转换、音视频处理交给 Tau 执行，插件不需要自己打包这些工具。`context.services` 目前只在桌面可用：
 
 | 服务                     | 用途                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
@@ -23,7 +23,7 @@ const controller = new AbortController();
 try {
   const { css } = await context.services.tailwind.compile(
     { source: '<div class="p-4">Hello</div>', language: "html" },
-    { signal: controller.signal }
+    { signal: controller.signal },
   );
 } catch (error) {
   if (error instanceof Error && error.name === "AbortError") return;
@@ -39,7 +39,8 @@ try {
 
 ```ts
 const { css } = await context.services.tailwind.compile({
-  source: '<section class="p-4 rounded-tau-md bg-surface text-ink-1">Hello</section>',
+  source:
+    '<section class="p-4 rounded-tau-md bg-surface text-ink-1">Hello</section>',
   language: "html",
 });
 ```
@@ -57,11 +58,14 @@ const { css } = await context.services.tailwind.compile({
 ```ts
 import type { Descendant } from "@tau/plugins";
 
-const parsed = await context.services.markdown.deserialize("# 标题\n\n- [x] 已完成");
+const parsed =
+  await context.services.markdown.deserialize("# 标题\n\n- [x] 已完成");
 const nodes: Descendant[] = parsed.nodes;
 
 const { markdown } = await context.services.markdown.serialize(nodes);
-const { html, css } = await context.services.markdown.render(markdown, { theme: "light" });
+const { html, css } = await context.services.markdown.render(markdown, {
+  theme: "light",
+});
 ```
 
 - 语法与 Tau 编辑器一致：标题、列表与任务列表、表格、代码、数学公式、图片与媒体、Tau 的扩展语法等。
@@ -82,7 +86,9 @@ const result = await context.services.markdown.serialize(nodes, {
   codecs: [
     {
       type: "yourname.note",
-      serializer: { toMarkdown: (_node: unknown, children: string) => `> ${children}` },
+      serializer: {
+        toMarkdown: (_node: unknown, children: string) => `> ${children}`,
+      },
     },
   ],
 });
@@ -109,7 +115,7 @@ const result = await context.services.ffmpeg.run(
   },
   {
     onProgress: ({ time }) => console.log("已处理", time, "秒"),
-  }
+  },
 );
 const output = result.files[0].data;
 ```
@@ -145,12 +151,16 @@ function Preview({ source }: { source: string }) {
     const controller = new AbortController();
     services.markdown
       .render(source, { signal: controller.signal })
-      .then(result => setHtml(result.html))
+      .then((result) => setHtml(result.html))
       .catch(() => undefined);
     return () => controller.abort();
   }, [services, source]);
 
-  return html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : <pre>{source}</pre>;
+  return html ? (
+    <div dangerouslySetInnerHTML={{ __html: html }} />
+  ) : (
+    <pre>{source}</pre>
+  );
 }
 ```
 

@@ -1,14 +1,8 @@
 # 用户数据
 
-本篇业务授权、data/content、实体/记录/关联/事务与宿主动作适用于桌面；移动宿主尚未接线，即使是无需业务权限的插件自有实体也不能直接使用。移动当前只提供私有 KV，含移动目标的 permissions 必须为空。先查 [API 支持矩阵](api-support.md)。
+插件可以读取和修改用户在 Tau 中的内容：卡片、文章、项目文档、待办和日程，也可以创建属于插件自己的内容。这些接口目前只在桌面可用，用到它们的插件在 manifest 里只声明 `desktop`；手机上的插件保存数据用[私有存储](storage-and-network.md#私有存储)。
 
-插件可以读取和修改用户在 Tau 中的内容：卡片、文章、项目文档、待办和日程，也可以创建属于插件自己的内容。这一篇按以下顺序介绍：
-
-1. [权限](#权限)：访问用户数据前必须了解的授权方式。
-2. [读取](#读取)、[修改与删除](#修改与删除)、[读写正文](#读写正文)、[订阅变化](#订阅变化)。
-3. [选择并打开已有内容](#选择并打开已有内容)：不需要权限，让用户亲手挑选。
-4. [嵌入正文编辑器](#嵌入正文编辑器)和[Tau 的界面动作](#tau-的界面动作)。
-5. [插件内容](#插件内容)：插件自己创建的、带正文的内容。
+只需要让用户挑一项内容来用时，不必申请权限，直接用[选择并打开已有内容](#选择并打开已有内容)。
 
 ## 权限
 
@@ -88,12 +82,18 @@ const granted = await context.permissions.request(["cards:read", "todos:read"]);
 
 ```ts
 const weekAgo = Date.now() - 7 * 86_400_000;
-const page = await context.data.cards.query({ updatedAfter: weekAgo, limit: 50 });
+const page = await context.data.cards.query({
+  updatedAfter: weekAgo,
+  limit: 50,
+});
 for (const card of page.items) console.log(card.title, card.tags);
 
 // 读取下一页
 if (page.cursor) {
-  const next = await context.data.cards.query({ updatedAfter: weekAgo, cursor: page.cursor });
+  const next = await context.data.cards.query({
+    updatedAfter: weekAgo,
+    cursor: page.cursor,
+  });
 }
 
 const article = await context.data.articles.get(id); // 不存在时为 null
@@ -164,7 +164,7 @@ const doc = await context.data.documents.create({
 await context.data.documents.move(
   doc.id,
   { projectId, from: tree![0].documentId, to: null, index: 0 },
-  { expectedRevision: doc.revision }
+  { expectedRevision: doc.revision },
 );
 ```
 
@@ -181,7 +181,9 @@ await context.data.documents.move(
 const notebooks = await context.data.notebooks.query({ limit: 20 });
 const resources = await context.data.notebooks.resources(notebooks.items[0].id);
 const material = await context.data.materials.get(ref.id); // 来自 pick 的 material 引用
-const chats = await context.data.chats.query({ updatedAfter: Date.now() - 7 * 86_400_000 });
+const chats = await context.data.chats.query({
+  updatedAfter: Date.now() - 7 * 86_400_000,
+});
 ```
 
 | 类型     | 字段                                                                                                                          |
@@ -201,7 +203,10 @@ const chats = await context.data.chats.query({ updatedAfter: Date.now() - 7 * 86
 
 ```ts
 const todos = await context.data.todos.query({ completed: false, limit: 20 });
-const events = await context.data.calendar.query({ start: "2026-10-19", end: "2026-10-26" });
+const events = await context.data.calendar.query({
+  start: "2026-10-19",
+  end: "2026-10-26",
+});
 ```
 
 `todos.query` 的参数：
@@ -229,7 +234,11 @@ const card = await context.data.cards.create({
 });
 
 try {
-  await context.data.cards.update(card.id, { pinned: true }, { expectedRevision: card.revision });
+  await context.data.cards.update(
+    card.id,
+    { pinned: true },
+    { expectedRevision: card.revision },
+  );
 } catch (error) {
   if (error instanceof PluginConflictError) {
     // 用户刚在别处改过这张卡片：重新读取，再决定要不要重试
@@ -277,10 +286,15 @@ await context.data.cards.create({ content: { markdown: "# 标题\n\n正文" } })
 
 // 编辑器节点：与 content.read({ format: "nodes" }) 读到的格式相同，格式完整保留
 const source = await context.content.read(card.contentRef, { format: "nodes" });
-await context.data.cards.create({ content: { nodes: source!.nodes! } });
+await context.data.cards.create({
+  content: { nodes: source!.nodes!, contracts: source!.contracts },
+});
 
 // 复制一份已有正文：Tau 内部整份复制，插件拿不到正文内容
-await context.data.articles.create({ title: "副本", content: { copyOf: card.contentRef } });
+await context.data.articles.create({
+  title: "副本",
+  content: { copyOf: card.contentRef },
+});
 
 // 共用本插件内容的正文：新卡片与插件内容是同一份正文，改一处另一处同步变化
 await context.data.cards.create({ content: { shareOf: answer.contentRef } });
@@ -294,6 +308,7 @@ await context.data.cards.create({ content: { shareOf: answer.contentRef } });
 | `shareOf`  | 让插件内容同时也是一张卡片、一篇文章或一篇项目文档，在哪里改都是同一份正文 | 只用于新建卡片、文章、项目文档与「插入到项目」       |
 
 - `nodes` 只检查结构：顶层是元素，元素有 `type` 和非空的 `children`，文字节点有 `text`。Tau 不认识的节点类型（例如来自未安装的插件）原样保存，安装对应插件后即可正常显示。
+- 原样搬运读到的节点时，把同时读到的 `contracts` 一起传回。它记录了插件块的数据版本，缺了它，其他插件的块可能变成只读。只新建自己插件的块时可以省略。
 - `content.read({ format: "nodes" })` 的结果带 `schemaVersion`。节点结构有不兼容的变化时它会增加，插件可以与 `EDITOR_NODE_SCHEMA_VERSION` 比较，判断自己是否认得这些节点。
 - 正文中的待办勾选项由 Tau 维护身份，复制或搬运后各自独立，不需要插件处理。
 - `copyOf` 的来源可以是卡片、文章、项目文档或任一插件内容的正文。复制的是当前内容，之后两份互不影响。
@@ -321,7 +336,7 @@ const snapshot = await context.content.read(card.contentRef);
 const { revision } = await context.content.edit(
   card.contentRef,
   { op: "append", content: { markdown: "今天读完了第三章。" } },
-  { expectedRevision: snapshot!.revision }
+  { expectedRevision: snapshot!.revision },
 );
 ```
 
@@ -343,7 +358,7 @@ const { revision } = await context.content.edit(
 ## 订阅变化
 
 ```ts
-context.events.on(["card.created", "card.updated", "card.deleted"], event => {
+context.events.on(["card.created", "card.updated", "card.deleted"], (event) => {
   queryClient.invalidateQueries({ queryKey: ["cards"] });
 });
 ```
@@ -375,7 +390,10 @@ context.events.on(["card.created", "card.updated", "card.deleted"], event => {
 import { EntityRef, type PluginEntityRef } from "@tau/plugins";
 
 async function linkExisting() {
-  const picked = await context.app.pick({ kinds: ["card", "diary", "todo"], multiple: true });
+  const picked = await context.app.pick({
+    kinds: ["card", "diary", "todo"],
+    multiple: true,
+  });
   // [{ ref: { kind: "card", id: "12" }, title: "读书笔记" }, ...]，用户取消时为空数组
   await context.storage.set("links", picked);
 }
@@ -432,10 +450,10 @@ await context.app.open(cardRef, { at: { block: 3 } }); // 打开卡片并滚动�
 
 ```tsx
 // 列表里直接放组件：同一次渲染的引用会合并成一次查询
-links.map(link => <EntityRef key={link.ref.id} target={link.ref} />);
+links.map((link) => <EntityRef key={link.ref.id} target={link.ref} />);
 
 // 需要自己排版或排序时，批量读取当前状态，每次最多 200 项
-const states = await context.app.describe(links.map(link => link.ref));
+const states = await context.app.describe(links.map((link) => link.ref));
 // [{ ref, status: "ok", title }, { ref, status: "missing" }, { ref, status: "denied", permission }]
 ```
 
@@ -484,7 +502,12 @@ function CardRow({ card }: { card: PluginCard }) {
 
 ```tsx
 <button
-  onClick={() => void context.app.run("content.export", { ref: card.contentRef, format: "pdf" })}
+  onClick={() =>
+    void context.app.run("content.export", {
+      ref: card.contentRef,
+      format: "pdf",
+    })
+  }
 >
   导出 PDF
 </button>
@@ -523,7 +546,11 @@ if (ref) await context.links.add(question.id, ref); // 用户取消时为 null
 ### 一个周记的例子
 
 ```tsx
-import { ContentEditor, type PluginOwnEntity, type PluginPageProps } from "@tau/plugins";
+import {
+  ContentEditor,
+  type PluginOwnEntity,
+  type PluginPageProps,
+} from "@tau/plugins";
 import { NotebookPen } from "lucide-react";
 
 // activate 内：声明内容类型
@@ -531,20 +558,30 @@ context.entities.registerKind({
   kind: "note",
   label: "周记",
   icon: NotebookPen,
-  open: { page: "review", params: note => ({ week: note.key }) },
+  open: { page: "review", params: (note) => ({ week: note.key }) },
 });
 
 // 按周次找到周记，没有就新建
 async function noteOf(week: string) {
   return (
     (await context.entities.find("note", week)) ??
-    (await context.entities.create({ kind: "note", key: week, title: `${week} 周记` }))
+    (await context.entities.create({
+      kind: "note",
+      key: week,
+      title: `${week} 周记`,
+    }))
   );
 }
 
 // 页面里编辑正文
 function NotePanel({ note, at }: { note: PluginOwnEntity; at?: string }) {
-  return <ContentEditor contentRef={note.contentRef} at={at} placeholder="这一周想记下什么" />;
+  return (
+    <ContentEditor
+      contentRef={note.contentRef}
+      at={at}
+      placeholder="这一周想记下什么"
+    />
+  );
 }
 ```
 
@@ -603,7 +640,10 @@ const page = await context.entities.query({
   where: { groupId: "g1", status: { ne: "resolved" } },
   orderBy: [{ field: "sortIndex" }, { field: "createdAt", direction: "desc" }],
 });
-const open = await context.entities.count({ kind: "question", where: { status: "open" } });
+const open = await context.entities.count({
+  kind: "question",
+  where: { status: "open" },
+});
 ```
 
 - 用 `where` 时必须同时给出 `kind`，字段须在这个类型的 `indexes` 里。
@@ -624,15 +664,23 @@ const open = await context.entities.count({ kind: "question", where: { status: "
 
 ```ts
 // activate 内：声明集合
-context.records.registerCollection({ name: "groups", indexes: { sortIndex: "number" } });
+context.records.registerCollection({
+  name: "groups",
+  indexes: { sortIndex: "number" },
+});
 
-const group = await context.records.insert("groups", { title: "读书", sortIndex: 1024 });
-const { items } = await context.records.query("groups", { orderBy: { field: "sortIndex" } });
+const group = await context.records.insert("groups", {
+  title: "读书",
+  sortIndex: 1024,
+});
+const { items } = await context.records.query("groups", {
+  orderBy: { field: "sortIndex" },
+});
 await context.records.update(
   "groups",
   group.id,
   { ...group.data, title: "阅读" },
-  { expectedRevision: group.revision }
+  { expectedRevision: group.revision },
 );
 ```
 
@@ -658,11 +706,17 @@ await context.records.update(
 `context.links` 把插件内容连到其他内容上，例如问题关联的探究材料、问题与答案。关联是有序的，可以带角色。被关联的卡片、文章、项目文档会在脉络的「被关联」里列出你的内容，按你声明的类型名与图标显示，点击打开你的插件页面；插件停用后照样显示，插件卸载后不再显示。手机上的脉络也会列出（只显示，不能打开，手机不运行插件）。
 
 ```ts
-const picked = await context.app.pick({ kinds: ["card", "article", "material"], multiple: true });
-for (const item of picked) await context.links.add(question.id, item.ref, { role: "material" });
+const picked = await context.app.pick({
+  kinds: ["card", "article", "material"],
+  multiple: true,
+});
+for (const item of picked)
+  await context.links.add(question.id, item.ref, { role: "material" });
 
 const materials = await context.links.list(question.id, { role: "material" });
-for (const state of await context.app.describe(materials.map(link => link.to)))
+for (const state of await context.app.describe(
+  materials.map((link) => link.to),
+))
   if (state.status === "missing") console.log("材料已删除");
 ```
 
@@ -685,16 +739,19 @@ for (const state of await context.app.describe(materials.map(link => link.to)))
 一个操作要同时改几处数据时（例如删除问题时一并删除它的轨迹记录，或新建问题并关联材料），用 `context.transaction` 把这些写入作为一个整体提交：全部生效，或者全部不生效。
 
 ```ts
-await context.transaction(async tx => {
+await context.transaction(async (tx) => {
   const { id } = await tx.entities.create({ kind: "question", key, title });
-  for (const item of picked) await tx.links.add(id, item.ref, { role: "material" });
+  for (const item of picked)
+    await tx.links.add(id, item.ref, { role: "material" });
   await tx.records.insert("events", { questionId: id, type: "create" });
 });
 
 // 重排：不带 revision 即不论当前版本直接写入
-await context.transaction(async tx => {
+await context.transaction(async (tx) => {
   for (const [index, question] of ordered.entries())
-    await tx.entities.update(question.id, { meta: { ...question.meta, sortIndex: index } });
+    await tx.entities.update(question.id, {
+      meta: { ...question.meta, sortIndex: index },
+    });
 });
 ```
 

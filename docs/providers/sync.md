@@ -12,7 +12,7 @@ import type { SyncProvider } from "@tau/plugins/sync";
 context.sync.register({
   id: context.pluginId,
   name: "我的存储",
-  create: config => createStorage(context, parseConfig(config)),
+  create: (config) => createStorage(context, parseConfig(config)),
 });
 
 function createStorage(context: PluginContext, config: MyConfig): SyncProvider {
@@ -78,13 +78,22 @@ context.settings.register({
         title: "存储位置",
         fields: [
           { key: "bucket", label: "Bucket", type: "text", summary: true },
-          { key: "prefix", label: "目录", type: "text", optional: true, placeholder: "sync" },
+          {
+            key: "prefix",
+            label: "目录",
+            type: "text",
+            optional: true,
+            placeholder: "sync",
+          },
           {
             key: "style",
             label: "地址模式",
             type: "choice",
             default: "path",
-            options: [{ value: "path", label: "路径模式" }, { value: "host", label: "虚拟主机模式" }],
+            options: [
+              { value: "path", label: "路径模式" },
+              { value: "host", label: "虚拟主机模式" },
+            ],
           },
         ],
       },
@@ -95,15 +104,15 @@ context.settings.register({
 });
 ```
 
-| 字段类型        | 用途                                                                 |
-| --------------- | -------------------------------------------------------------------- |
-| `text`          | 普通文本                                                             |
-| `secret`        | 密钥、令牌、密码；不能作摘要                                         |
-| `url`           | 地址                                                                 |
-| `choice`        | 固定选项，`default` 为缺省值                                         |
-| `remote-choice` | 按已填的值远程加载选项（如仓库、分支），`dependsOn` 中的字段变化时清空 |
-| `switch`        | 开关，值为 `"true"` / `"false"`，`default` 为布尔；不参与必填校验       |
-| `service-choice` | 由宿主服务选择（目前为 `git.cacheDirectory`，仅桌面），值与 `labelKey` 显示名一起保存；留空即宿主默认 |
+| 字段类型         | 用途                                                                                                                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `text`           | 普通文本                                                                                                               |
+| `secret`         | 密钥、令牌、密码；不能作摘要                                                                                           |
+| `url`            | 地址                                                                                                                   |
+| `choice`         | 固定选项，`default` 为缺省值                                                                                           |
+| `remote-choice`  | 按已填的值远程加载选项（如仓库、分支），`dependsOn` 中的字段变化时清空                                                 |
+| `switch`         | 开关，值为 `"true"` / `"false"`，`default` 为布尔；不参与必填校验                                                      |
+| `service-choice` | 由 Tau 弹出选择（目前只有 `git.cacheDirectory`，选择本机目录，仅桌面），值与 `labelKey` 显示名一起保存；留空用默认位置 |
 
 - 未标 `optional` 的字段都是必填，空值时 Tau 拒绝保存并标在字段上；「可选」由 Tau 显示，不要写进 label。
 - 选项可带 `description`：手机上少量（≤3）带说明的选项平铺为整行单选，桌面在字段说明里显示当前选项的说明。

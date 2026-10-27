@@ -22,24 +22,27 @@ context.video.register({
   id: context.pluginId,
   name: "我的视频站",
   create: (config): VideoInstance => ({
-    matches: url => /^https:\/\/video\.example\.com\/v\//.test(url),
+    matches: (url) => /^https:\/\/video\.example\.com\/v\//.test(url),
     async resolve(url, signal) {
       const info = await fetchVideoInfo(context, url, signal);
       return {
         title: info.title,
         cover: info.cover,
-        variants: info.qualities.map(quality => ({
+        variants: info.qualities.map((quality) => ({
           label: quality.label,
           ref: { videoId: info.id, quality: quality.id },
         })),
       };
     },
-    cacheKey: ref => `${ref.videoId}:${ref.quality}`,
+    cacheKey: (ref) => `${ref.videoId}:${ref.quality}`,
     async getPlayback(ref, signal) {
       const stream = await fetchStreamUrl(context, ref, signal);
       return {
         kind: "file",
-        stream: { url: stream.url, headers: { Referer: "https://video.example.com" } },
+        stream: {
+          url: stream.url,
+          headers: { Referer: "https://video.example.com" },
+        },
       };
     },
   }),
@@ -97,16 +100,25 @@ context.settings.register({
   id: "video",
   title: "我的视频站",
   target: "video",
-  form: { groups: [{ title: "连接", fields: [{ key: "proxy", label: "代理地址", type: "url", optional: true }] }] },
+  form: {
+    groups: [
+      {
+        title: "连接",
+        fields: [
+          { key: "proxy", label: "代理地址", type: "url", optional: true },
+        ],
+      },
+    ],
+  },
 });
 ```
 
-配置归插件页，应用设置显示已启用来源；多个来源按 URL 匹配，不互斥。扫码登录等特殊交互可使用 component，组件收到 `videoConfig`：`value` 和 `save(value)`，每个插件一份配置。保存后，下一次 `create` 就会读到新的值。
+每个插件一份配置。多个视频来源可以同时启用，Tau 按链接分别交给对应的插件。扫码登录等特殊交互改用组件，组件收到 `videoConfig`：`value` 和 `save(value)`。保存后，下一次 `create` 就会读到新的值。
 
 ## 插件不可用时
 
 - 插件未启用时，已保存的视频显示需要启用插件的提示，数据保留。
-- 移动端和发布的站点不运行插件，这些视频在那里只显示说明。
+- 手机和发布的站点上，这些视频只显示说明，不能播放。
 
 ## 测试清单
 

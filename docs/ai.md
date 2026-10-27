@@ -1,8 +1,6 @@
 # AI
 
-插件可以调用用户在 Tau 中配置好的大模型。插件拿不到用户的 API Key 和服务地址：请求由 Tau 代为发出，用量记在插件名下，受用户设置的额度约束。
-
-有两种用法：
+插件可以调用用户在 Tau 中配置好的大模型（仅桌面）。插件拿不到用户的 API Key 和服务地址：请求由 Tau 代为发出，用量记在插件名下，受用户设置的额度约束。
 
 | 用法                                                | 适合                                                  | 用户需要做什么                   |
 | --------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
@@ -65,7 +63,9 @@ declare const __PLUGIN_META__: { id: string; name: string; version: string };
 export default definePlugin({
   ...__PLUGIN_META__,
   ai: {
-    features: [{ id: "summary", name: "文章摘要", description: "概括用户选择的文章" }],
+    features: [
+      { id: "summary", name: "文章摘要", description: "概括用户选择的文章" },
+    ],
   },
   create: () => ({
     activate(context) {
@@ -81,8 +81,14 @@ export default definePlugin({
           const result = await context.ai.chat({
             feature: "summary",
             messages: [
-              { role: "system", content: "概括主要内容，不添加原文以外的信息。" },
-              { role: "user", content: typeof input === "string" ? input : "请先选择正文。" },
+              {
+                role: "system",
+                content: "概括主要内容，不添加原文以外的信息。",
+              },
+              {
+                role: "user",
+                content: typeof input === "string" ? input : "请先选择正文。",
+              },
             ],
             maxOutputTokens: 1024,
           });
@@ -168,5 +174,3 @@ for await (const event of model.stream({
 通过 `signal` 取消时，也可能抛出标准的 `AbortError`。
 
 遇到额度不足、拒绝授权这类错误后，不要自动循环重试。不要在模块顶层调用 AI；在 `activate` 中也不要等待 AI 请求完成，以免拖慢插件启用。
-
-`speechInputRefinement`（SDK 0.43.0 / 桌面 0.59.5）引用应用分配的语音整理模型，不是发起录音的接口。宿主听写整理本身不依赖插件，也不向整理模型授予工具；移动端尚未接入这一 LLM 执行能力。

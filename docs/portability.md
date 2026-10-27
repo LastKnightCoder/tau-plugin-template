@@ -1,22 +1,13 @@
-<!-- 由 scripts/plugins/sync-author-docs.mjs 从 packages/plugins/docs/portability.md 生成，请勿单独编辑。 -->
+# 多端适配
 
-# 多端插件作者契约
+同一个插件包可以同时运行在 Tau 桌面端、Android 和 iOS 上：写一份代码、发布一个 ZIP，用户在哪个平台安装，就在哪个平台运行。其他文档里的接口，手机上能不能用，以这里的[接口表](#各平台可用的接口)为准。
 
-一个 SDK、一套模板、同一插件 ID/版本对应同一 ZIP。普通页面直接使用公共 API；宿主在加载前检查兼容性。具体宿主实现范围见 [API 支持矩阵](api-support.md)，SDK 类型存在不等于所有接口都已在移动端接入。
+## 声明支持的平台
 
-格式 3 也承载仅桌面的插件。使用业务数据、视频、图片生成或博客发布等桌面能力时，只声明 desktop；不要增加尚未实现对应 API 的移动目标。白板插件继续使用 whiteboardExtensions，作者清单不重复填写白板类型，也不声明白板能力标签。宿主从实际定义识别静态贡献，作者只声明 desktop，安装兼容性统一由平台和最低客户端版本决定。
-
-## 作者清单
-
-作者维护 manifest.json 的身份、目标平台、最低版本和数据权限。包格式、入口、摘要由构建器生成。
+在 manifest 的 `targets` 里列出支持的平台，以及每个平台的最低客户端版本：
 
 ```json
 {
-  "id": "example.counter",
-  "name": "计数器",
-  "description": "保存当前工作区的计数。",
-  "version": "1.0.0",
-  "categories": ["page"],
   "targets": {
     "desktop": { "minAppVersion": "0.59.4" },
     "android": { "minAppVersion": "0.2.4" },
@@ -25,13 +16,39 @@
 }
 ```
 
-版本填写实际验证过的下限。声明平台不代表已在该平台通过设备验收，也不控制生产中心的分发开关。
+- 没有列出的平台不能安装这个插件。至少要列一个平台。
+- `minAppVersion` 填你实际测试过的最低 Tau 版本，写完整的版本号，不写范围。用户的 Tau 低于这个版本时，插件中心不会向他们提供这一版。
+- 列出一个平台，表示插件的**全部功能**都已在这个平台上适配并测试过。只有部分功能能用的平台，先不要列。
+- 用到下表中只有桌面支持的接口时，只写 `desktop`。
 
-命令、页面、设置、网络、媒体、源码编辑、样式编译、同步和上传均直接使用统一 API，不填写 requires/optional/required。正文节点只在 editorExtensions 中注册一次，Markdown 转换在 editorCodecs 中注册，白板元素在 whiteboardExtensions 中注册；不在清单重复列节点、支持等级或贡献标记。声明某个平台表示该插件完整功能已适配该平台；不完整的平台暂不声明。
+你不需要在 manifest 里声明用到了哪些接口：Tau 根据平台和版本判断能否安装，接口本身由代码注册。
 
-permissions 是用户数据授权上限，与宿主功能装配分开。资源字段、数据校验、样式源码字段和 AI 功能定义描述实际数据或行为，仍按 API 要求填写。
+## 各平台可用的接口
 
-## 页面和入口
+| 接口                                                   | 桌面 | Android / iOS | 说明                                                       |
+| ------------------------------------------------------ | ---- | ------------- | ---------------------------------------------------------- |
+| `pages`、`navigation`                                  | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
+| `settings`、`storage`、`fetch`、`websocket`            | ✓    | ✓             |                                                            |
+| `commands`                                             | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
+| `environment`、`register`、`signal`                    | ✓    | ✓             |                                                            |
+| 编辑器块（`editorExtensions`、`editorCodecs`）         | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
+| `sync`、`upload`、`tts`、`asr` 提供方                  | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
+| `images`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
+| `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
+| `data`、`content`、`events`、`app`、`permissions`      | ✓    |               | 用户数据，见[用户数据](user-data.md)                       |
+| `entities`、`records`、`links`、`transaction`          | ✓    |               | 插件自己的内容也只在桌面可用                               |
+| `ai`、`mcp`、`chat`、`flashcards`                      | ✓    |               |                                                            |
+| `excerpts`、`materials`、`services`                    | ✓    |               |                                                            |
+| 白板扩展（`whiteboardExtensions`）                     | ✓    |               |                                                            |
+| `backend`（本机后台）                                  | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
+| 随插件附带的 Skill                                     | ✓    |               | 手机上会保留，但不使用                                     |
+
+- 声明了 `android` 或 `ios` 的插件，`permissions` 必须为空。手机还不支持用户数据授权，构建和插件中心都会拒绝这样的包。
+- 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
+
+## 页面与入口
+
+页面和入口分开注册。同一份代码在桌面上出现在侧边栏，在手机上出现在「我的 › 插件功能」：
 
 ```tsx
 const page = context.pages.register({
@@ -39,78 +56,79 @@ const page = context.pages.register({
   title: "任务管理",
   component: TasksPage,
 });
-context.navigation.registerEntry({ id: "tasks", title: "任务管理", page });
-context.settings.register({ id: "preferences", title: "设置", component: Settings });
+context.navigation.registerEntry({
+  id: "tasks",
+  title: "任务管理",
+  icon: TasksIcon,
+  page,
+});
+context.settings.register({
+  id: "preferences",
+  title: "设置",
+  component: Settings,
+});
 ```
 
-页面不自动创建入口。桌面侧栏、移动插件功能列表消费同一语义声明；作者不操作宿主 history，不导入宿主路由。详情页可没有入口。页面句柄的 open 仅接收标量参数，页面注销后入口回收。
+- 只是从别的页面打开的详情页，可以不注册入口。
+- 手机上没有命令面板，主要功能一定要有入口。
+- `@tau/ui` 的 `Dialog`、`Drawer` 在手机上会处理系统返回键和安全区，直接使用即可。
+- 手机系统可能随时结束应用进程，不保证调用离开守卫或 `deactivate`。数据在用户操作时就保存。
 
-Dialog/Drawer 直接使用公共 UI。宿主负责浮层返回、层级与安全区。页面组件通过 pageContext.registerLeaveGuard 登记离开守卫，并在 effect 清理时注销；系统终止进程不保证调用守卫或 deactivate，重要数据应及时保存。
+## 适配不同的屏幕
 
-context.storage 为当前工作区的插件私有 JSON 存储，不等于业务实体数据库。异步任务处理 signal 与工作区失效；资源通过 context.register 或组件 effect 回收。
+布局按容器宽度决定，不按平台。手机横屏、平板、桌面窄窗口都可能出现，同一个平台的宽度也不固定：
 
-## 环境与平板
-
-```ts
-interface PluginEnvironment {
-  readonly platform: "desktop" | "android" | "ios" | "web";
-  readonly input: {
-    readonly coarsePointer: boolean;
-    readonly finePointer: boolean;
-  };
+```css
+.yourname-board {
+  container-type: inline-size;
+}
+@container (min-width: 640px) {
+  .yourname-board {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
 }
 ```
 
-React 组件使用 usePluginEnvironment()，非 React 调用每次读取 context.environment，二者是同一宿主源的不可变快照。平台在会话内固定，输入变化自动通知组件；未注入环境是装配错误，不假定某个平台。
+- 用 CSS 容器查询或媒体查询切换布局，不要根据平台名推断屏幕大小，也不要解析 User-Agent。
+- 触摸屏上没有悬停和右键。所有操作都要有能点击的按钮，悬停、右键、拖拽只作为增强。
+- 屏幕旋转或分屏时布局会变，正在编辑的内容不能丢。
 
-coarsePointer 对应 (any-pointer: coarse)，finePointer 对应 (any-pointer: fine)：只表达 WebView 报告的指针精度，二者可以同时为真。它们不识别手机、平板、当前事件来源、键盘或悬停能力；一次手势的来源看 PointerEvent。普通插件一般不需要读取环境。
+### 读取运行环境
 
-环境没有 layout 或能力清单。布局用 CSS 与容器宽度，不能用系统平台推导宽窄。Android 平板沿用 android，未来 iPad 宿主沿用 SDK 的 ios 家族标识；分屏时重排布局，接入鼠标时增强操作而不删除触摸按钮。平板支持还需要宿主和设备验收，不能从平台声明推断已通过。
+大部分插件不需要读取环境。确实需要按平台区分交互时，在组件里用 `usePluginEnvironment()`，在组件外读 `context.environment`：
 
-## 编辑器插件
+```tsx
+import { usePluginEnvironment } from "@tau/plugins";
 
-节点结构、codec、校验和渲染共用；静态 editorExtensions/editorCodecs 直接交给 definePlugin，不依赖 activate 或缓存全局 context。博客由自己的宿主提供 web/只读环境，不能启动应用插件生命周期。
+function Toolbar() {
+  const { platform, input } = usePluginEnvironment();
+  const touch = input.coarsePointer && !input.finePointer;
+  // ...
+}
+```
 
-宿主只把公开的扩展字段交给编辑器内核，附加属性不会执行。
+| 字段                  | 说明                                                                    |
+| --------------------- | ----------------------------------------------------------------------- |
+| `platform`            | `desktop`、`android`、`ios`，在博客里为 `web`。平板沿用所在系统的平台名 |
+| `input.coarsePointer` | 设备有触摸屏这类粗指针                                                  |
+| `input.finePointer`   | 设备有鼠标、触控板这类细指针                                            |
 
-优先使用 SourceBlockEditor/useSourceBlock 与公开的节点 API。标准插入、选区、源码增量、只读和迟到提交保护由宿主负责；节点允许移动不等于所有平台都采用鼠标拖拽。
+两种指针可以同时存在，比如接了鼠标的平板。它们说的是设备有什么，不是这一次操作来自哪里；判断某次手势的来源，看 `PointerEvent.pointerType`。接入鼠标时增加便捷操作，不要因此删掉触摸按钮。
 
-图册排序、绘图等专有交互仍由作者实现。基础操作保留可点击/可聚焦按钮，拖拽与悬停只作增强；布局按实际容器调整，共享编辑状态和提交函数，方向或输入变化不能丢失草稿。不能为手机另建一套节点类型。
+## 编辑器块
 
-## 宿主服务与当前作用域
+编辑器块在桌面和手机上使用同一份 `editorExtensions` 和 `editorCodecs`：节点类型、数据和渲染都相同，不要为手机另建一套节点。
 
-源码编辑和样式编译直接通过 SourceBlockEditor/useSourceBlock/useInlineSource 使用，宿主负责注入实现，不再检查字符串声明。只读、输入失败与编译失败仍遵循接口语义。博客只读环境可以显示已保存内容或源码，不启动应用插件生命周期。
+- 手机上，插入、上下移动、删除等标准操作由 Tau 提供；用 `SourceBlockEditor` 的源码块，编辑时会打开全屏的源码页。见[编辑器扩展 · 源码预览块](editor.md#源码预览块)。
+- 块里自定义的操作（如图册排序、画图）要自己适配触摸：保留能点击的按钮，拖拽只作为增强。
 
-useResourceUpload() 在只读或没有资源存储的作用域返回 undefined，表示当前不能上传。白板服务直接通过 getService 获取必需服务、tryGetService 获取允许缺省的服务，不另列 requires/optional；宿主仍按扩展绑定服务注册表，插件私有存储按插件和工作区隔离。服务缺失与调用失败按实际 API 返回值或异常处理。
+## 服务提供方
 
-## 同步与资源上传
+同步存储、资源上传、语音合成、语音识别四类提供方，在桌面和手机上使用同一套注册接口和配置表单。配置界面由 Tau 按平台渲染，你不需要写两套。同步的分块、校验和重组也由 Tau 处理，不需要手机专用的分支。写法见[服务提供方](providers/README.md)。
 
-桌面、Android 和 iOS 使用同一套 context.sync、context.upload、context.fetch 和 settings.register API。提供方直接注册服务与配置表单，无需再在清单声明这些 API。任务调度、持久化与选用由宿主负责。
+## 测试
 
-同步与上传的配置表单只声明字段（`form`），两端由宿主渲染：桌面为插件详情 › 设置中的设置行，移动为分组行与推入式选择页。宿主负责显式保存、必填校验、连接测试与服务选用，保存不改变当前选用；作者不调用原生存储或宿主路由，也不再为两端各写一套表单。需要按账号补全字段或额外校验时实现 `beforeSave`。旧版以组件注册的存储设置仍能激活与同步，但宿主不再渲染，只提示用户更新插件。
+声明一个平台之前，在这个平台上完整走一遍：安装、启用、使用每项功能、保存、取消、停用，以及完全退出后重新打开。手机上额外检查软键盘、中文输入法、系统返回键和横竖屏切换。模拟器能发现大部分问题，但上架前最好在真机上再试一次。
 
-同步与上传的完整配置分别归各插件，不做统一账号共享；不要把凭据存入 context.storage。宿主在任务开始固定配置，停用/切库后不交付迟到结果。两端网络为原生 HTTP(S) 流式传输，取消覆盖响应体消费阶段；不承诺浏览器 Cookie、后台续传或进程终止后继续任务。
-
-同步提供方继续实现相同的 `Uint8Array` 对象接口。宿主统一管理数据库、资源和会话的分块、校验与重组，作者无需增加移动分支或专用分片。对象名由宿主决定，提供方应原样存取字节，不依赖数据库后缀、目录布局或清单内容。公网直链上传仍接收完整资源并返回真实 HTTP(S) URL，其内存与远端服务约束保持原样。
-
-## 语音合成提供方
-
-`context.tts.register` 与 `settings target: "tts"` 两端为同一接口，移动最低 0.2.7。账号、模型、当前音色与试听由宿主「语音合成」设置统一管理，表单只接收 `ttsConfig`（instanceId、value、models、save），不要自行持久化凭据或选择音色。手机屏幕与桌面表单布局不同时，按 `usePluginEnvironment().platform` 渲染各自的组件。复刻需要公网地址时使用 `context.upload.uploadRemote`，本地保存模式下应明确报错，不要伪造地址。
-
-## 构建和分发
-
-buildPortablePluginManifest(authorManifest, output) 接收作者清单和构建器提供的 main/styles/integrity/skills，输出格式 3、apiVersion 1、profile web-v1、CJS 单入口的发行清单。targets 仅记录各平台 minAppVersion，插件中心只消费规范化结果，不执行作者源码。读取器提取协议字段，忽略附加元信息；只校验身份、协议、授权、文件完整性和实际数据约束，不限制简介、关键词或 Skill 数量。版本使用 SemVer，允许预发布和构建标识。
-
-客户端按平台、最低版本、格式与运行配置检查兼容性，插件中心再检查分发开关。宿主装配时读取实际注册的静态贡献，不依赖重复的能力词表或推测任意 JavaScript 的全部依赖。新发行要求桌面至少 0.59.4、移动至少 0.2.4；客户端安装包单独发行。
-
-纯 Markdown Skill 由目录收集，桌面读取，移动校验保存但不执行；脚本与后台不因此成为移动能力。现有桌面领域插件保持其真实支持范围。移动业务数据权限未接时，不允许发行声明这些权限的移动目标。
-
-React、SDK 与公共 UI 由宿主提供，其他浏览器依赖随包构建；不引用宿主 src，不导入 host/environment-host 等内部装配入口。可信插件与宿主共享 JS 环境，平台兼容检查、完整性摘要和用户权限不构成恶意代码沙箱。
-
-## 验证
-
-仓库外构建验证依赖闭包、类型和包格式；设备联调验证安装、启用、插入、编辑、保存、取消、只读与重启恢复。两者分别记录，模拟器不能替代真机、最低系统、平板与性能验收。发布 SDK、插件和客户端分别遵循明确发行授权。
-
-## 语音输入提供方
-
-ASR 与语音合成是独立注册。语音输入插件使用 `context.asr.register` 和 `settings target: "asr"`，账号通过 `asrConfig.save(value, modelId)` 保存；麦克风与重采样由宿主管理，输入目标及提交守卫由后续界面消费者负责。当前未挂载语音输入和整理入口，ASR 表单保留注册但不显示。SDK 0.43.0 要求 ASR 目标最低桌面 0.59.5、移动 0.2.7。`context.websocket.connect` 同步返回标准 WebSocket 接口形状，鉴权头和任务 signal 为第三参扩展；两端的发送背压、关闭握手和插件生命周期由宿主统一处理。详见 [WebSocket](websocket.md)。
+本地安装与调试的方法见[快速开始 · 在 Tau 里调试](getting-started.md#在-tau-里调试)。

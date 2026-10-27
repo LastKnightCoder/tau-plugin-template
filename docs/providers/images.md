@@ -55,14 +55,26 @@ context.settings.register({
   title: "我的图片服务",
   target: "images",
   models: [{ id: "image-model" }],
-  form: { groups: [{ title: "连接", fields: [
-    { key: "baseUrl", label: "服务地址", type: "url", default: "https://api.example.com/v1" },
-    { key: "apiKey", label: "API Key", type: "secret" },
-  ] }] },
+  form: {
+    groups: [
+      {
+        title: "连接",
+        fields: [
+          {
+            key: "baseUrl",
+            label: "服务地址",
+            type: "url",
+            default: "https://api.example.com/v1",
+          },
+          { key: "apiKey", label: "API Key", type: "secret" },
+        ],
+      },
+    ],
+  },
 });
 ```
 
-插件页由宿主管理多个账号、连接信息和模型；models 是初始候选目录，可手动输入模型 ID。应用设置只选择当前图片账号，保存不自动选用。特殊组件继续接收 imageConfig（instanceId、value、modelId、save）。
+用户可以在插件详情的「设置」里添加多个账号，为每个账号选择模型；`models` 是初始的候选列表，用户也可以手动输入模型 ID。在应用设置里选用哪个账号，保存账号不会自动选用。需要特殊交互时改用组件，组件收到 `imageConfig`（`instanceId`、`value`、`modelId`、`save`）。
 
 ## 职责划分
 

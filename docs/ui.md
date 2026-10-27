@@ -1,42 +1,20 @@
 # 界面
 
-跨端开发包的通用入口用 `context.navigation.registerEntry`，不使用桌面 sidebar API。页面注销会回收相关入口，展示位置由宿主决定；环境与可选能力见[跨端契约](portability.md)。下面的侧边栏、通知等桌面能力不自动包含在 web-v1 中。
+插件可以通过这些方式出现在 Tau 的界面里：
 
-下述四种位置描述桌面呈现。移动只有页面/语义入口和插件自己的设置页；commands 提供注册与回收，不自动增加手机命令面板；通知、旧 sidebar、首页/对象/详情扩展未接。具体见 [API 支持矩阵](api-support.md)。
+| 方式                  | 出现在                                                 | 平台 |
+| --------------------- | ------------------------------------------------------ | ---- |
+| [页面](#页面)         | 一个完整的 React 页面，和 Tau 自己的页面一样前进、后退 | 全部 |
+| [功能入口](#功能入口) | 桌面在侧边栏，手机在「我的 › 插件功能」，点击打开页面  | 全部 |
+| [设置](#设置)         | 插件详情页的「设置」                                   | 全部 |
+| [命令](#命令)         | 桌面的 Ctrl+K 命令面板                                 | 桌面 |
+| [侧边栏](#侧边栏)     | 侧边栏的分组、角标和子项                               | 桌面 |
+| [首页面板](#首页面板) | 「今日」首页                                           | 桌面 |
+| [对象动作](#对象动作) | 卡片、文章等对象的「⋯」菜单                            | 桌面 |
+| [详情区块](#详情区块) | 卡片、文章、项目文档详情的正文上方                     | 桌面 |
+| [通知](#通知)         | 窗口内或独立的通知窗口                                 | 桌面 |
 
-桌面插件可以通过四种方式出现在界面里：
-
-- **命令**：出现在 Ctrl+K 命令面板中，用户搜索后执行。
-- **页面**：一个完整的 React 页面，和 Tau 自己的页面一样参与前进、后退。
-- **侧边栏入口**：在侧边栏放一个条目，点击打开某个页面。
-- **设置**：插件详情页「设置」中的一个区域。
-
-另外，插件可以随时发送**通知**。
-
-这些都在 `activate(context)` 里注册，插件停用时自动撤销。
-
-## 命令
-
-```ts
-context.commands.register({
-  id: "reset-count",
-  title: "重置计数",
-  run: async () => {
-    await context.storage.set("count", 0);
-    return null;
-  },
-});
-```
-
-| 字段    | 说明                                                                |
-| ------- | ------------------------------------------------------------------- |
-| `id`    | 局部 ID，见 [ID 规则](plugin-basics.md#id-规则)                     |
-| `title` | 命令标题，用户在命令面板里按它搜索                                  |
-| `run`   | 执行函数，可以是异步的。返回值必须是 JSON 值，没有结果时返回 `null` |
-
-- 注册时不会执行命令，用户选中它时才调用 `run`。
-- `run` 的参数 `input` 不保证有内容，命令面板执行时不会传自定义参数。需要用户输入时，打开一个页面或设置让用户填写。
-- `run` 抛出异常表示执行失败。耗时较长的命令应该在界面上给出进度或结果反馈。
+这些都在 `activate(context)` 里注册，插件停用时自动撤销。要在手机上使用的插件，只用标为「全部」的方式，见[多端适配](portability.md)。
 
 ## 页面
 
@@ -48,7 +26,11 @@ function StatsPage({ context }: PluginPageProps) {
 }
 
 // activate 内
-const stats = context.pages.register({ id: "stats", title: "统计", component: StatsPage });
+const stats = context.pages.register({
+  id: "stats",
+  title: "统计",
+  component: StatsPage,
+});
 await stats.open();
 ```
 
@@ -61,6 +43,8 @@ await stats.open();
 | `getId`     | 可选。`match: "params"` 时，用它从参数算出实例身份；默认按全部参数区分     |
 
 `register` 返回页面句柄，提供 `open(params?)` 和 `dispose()`。用 `open` 打开页面，不要自己操作浏览器地址或历史记录。
+
+注册页面不会自动出现入口。用户要能找到它，再注册一个[功能入口](#功能入口)。
 
 ### 带参数的页面
 
@@ -76,7 +60,7 @@ const book = context.pages.register({
   title: "书籍",
   component: BookPage,
   match: "params",
-  getId: params => String(params.bookId),
+  getId: (params) => String(params.bookId),
 });
 
 await book.open({ bookId: "42" });
@@ -118,6 +102,22 @@ function BookPage({ params, pageContext }: PluginPageProps) {
 
 页面上下文只是让 AI 知道用户在看什么。需要让 AI 能对页面执行操作，另外用 [MCP 工具](mcp.md)提供。
 
+### 离开前确认
+
+页面有未保存的编辑时，用 `pageContext.registerLeaveGuard` 拦下离开：返回 `false` 或解析为 `false` 的 Promise 时，留在当前页面。
+
+```tsx
+useEffect(() => {
+  if (!dirty) return;
+  const guard = pageContext.registerLeaveGuard(() =>
+    window.confirm("放弃未保存的修改？"),
+  );
+  return () => guard.dispose();
+}, [dirty, pageContext]);
+```
+
+守卫不能代替保存：应用被关闭、手机系统结束进程时不会调用它。
+
 ### 页面显示状态与 Esc
 
 页面切走后会保留状态，回来时原样恢复。页面隐藏时组件的 effect 会被清理，回到前台时重新执行，所以把键盘监听、轮询和订阅写在 effect 里，就会自动随页面暂停与恢复。
@@ -132,7 +132,9 @@ function BookPage({ pageContext }: PluginPageProps) {
 
   useEffect(() => {
     if (!drawerOpen) return;
-    const registration = pageContext.registerDismiss(() => setDrawerOpen(false));
+    const registration = pageContext.registerDismiss(() =>
+      setDrawerOpen(false),
+    );
     return () => registration.dispose();
   }, [drawerOpen, pageContext]);
 
@@ -144,14 +146,109 @@ function BookPage({ pageContext }: PluginPageProps) {
 - 只在页面显示时生效：页面切走后，它登记的浮层不会响应 Esc；回来后自动恢复。插件停用时全部清除。
 - `@tau/ui` 的模态 `Dialog`、`Drawer` 和 `Popover`、`Select`、`Menu` 已经自己处理 Esc，不需要登记。
 
+## 功能入口
+
+功能入口让用户找到你的页面。桌面上它出现在侧边栏，手机上出现在「我的 › 插件功能」；同一份代码，位置由 Tau 决定。
+
+```ts
+const page = context.pages.register({
+  id: "counter",
+  title: "计数",
+  component: CounterPage,
+});
+context.navigation.registerEntry({
+  id: "counter",
+  title: "计数",
+  icon: CounterIcon,
+  page,
+});
+```
+
+| 字段     | 说明                                                |
+| -------- | --------------------------------------------------- |
+| `id`     | 局部 ID                                             |
+| `title`  | 入口名称                                            |
+| `page`   | 本次启用中注册的页面句柄                            |
+| `params` | 可选。点击时传给页面的参数                          |
+| `icon`   | 可选。图标组件，见[图标](#图标)；省略时使用默认图标 |
+
+页面被撤销时，指向它的入口也会一起撤销。桌面上的功能入口放在侧边栏的「插件」分组；需要放进其他分组、显示角标或子项时，改用下一节的侧边栏接口（仅桌面）。
+
+## 设置
+
+```tsx
+import type { PluginSettingsProps } from "@tau/plugins";
+
+function Preferences({ context }: PluginSettingsProps) {
+  // 用 context.storage 读写设置值
+}
+
+const preferences = context.settings.register({
+  id: "preferences",
+  title: "计数设置",
+  description: "调整计数的步长",
+  component: Preferences,
+});
+```
+
+| 字段          | 说明                                                            |
+| ------------- | --------------------------------------------------------------- |
+| `id`          | 局部 ID                                                         |
+| `title`       | 设置区域的标题                                                  |
+| `description` | 可选。说明文字                                                  |
+| `component`   | React 组件，收到 `context`                                      |
+| `target`      | 服务提供方的配置表单才需要，见[服务提供方](providers/README.md) |
+
+设置区域显示在插件详情页的「设置」里，桌面和手机都可用。`register` 返回的句柄提供 `open()`，可以从命令或页面里跳转过去：
+
+```ts
+context.commands.register({
+  id: "open-preferences",
+  title: "打开计数设置",
+  run: async () => {
+    await preferences.open();
+    return null;
+  },
+});
+```
+
+设置值不会自动保存，组件需要自己用 [`context.storage`](storage-and-network.md) 读写。页面和设置同时显示同一份数据时，保存后要刷新另一处的状态，`storage` 本身不会通知变化。模板用 React Query 管理读取、保存和失败状态，可以照着写。
+
+## 命令
+
+```ts
+context.commands.register({
+  id: "reset-count",
+  title: "重置计数",
+  run: async () => {
+    await context.storage.set("count", 0);
+    return null;
+  },
+});
+```
+
+| 字段    | 说明                                                                |
+| ------- | ------------------------------------------------------------------- |
+| `id`    | 局部 ID，见 [ID 规则](plugin-basics.md#id-规则)                     |
+| `title` | 命令标题，用户在命令面板里按它搜索                                  |
+| `run`   | 执行函数，可以是异步的。返回值必须是 JSON 值，没有结果时返回 `null` |
+
+- 注册时不会执行命令，用户选中它时才调用 `run`。
+- `run` 的参数 `input` 不保证有内容，命令面板执行时不会传自定义参数。需要用户输入时，打开一个页面或设置让用户填写。
+- `run` 抛出异常表示执行失败。耗时较长的命令应该在界面上给出进度或结果反馈。
+
 ## 侧边栏
 
-侧边栏条目关联一个已注册的页面，点击时打开它，并在该页面显示时高亮。
+桌面插件可以直接控制侧边栏条目：放进指定分组、显示角标和子项。条目关联一个已注册的页面，点击时打开它，并在该页面显示时高亮。只在桌面运行的插件可以用它代替功能入口；也要在手机上运行时，用[功能入口](#功能入口)。
 
 ```ts
 import { SIDEBAR_GROUPS } from "@tau/plugins";
 
-const page = context.pages.register({ id: "counter", title: "计数", component: CounterPage });
+const page = context.pages.register({
+  id: "counter",
+  title: "计数",
+  component: CounterPage,
+});
 context.sidebar.registerItem({
   id: "counter",
   title: "计数",
@@ -187,7 +284,12 @@ context.sidebar.registerItem({
 
 ```ts
 const group = context.sidebar.registerGroup({ id: "habits", title: "习惯" });
-context.sidebar.registerItem({ id: "water", title: "喝水", group: group.id, page });
+context.sidebar.registerItem({
+  id: "water",
+  title: "喝水",
+  group: group.id,
+  page,
+});
 ```
 
 引用自建分组时使用返回的 `group.id`，不要直接写 `"habits"`。没有条目的分组不显示；分组被撤销后，其中的条目移到「插件」分组。
@@ -199,21 +301,28 @@ context.sidebar.registerItem({ id: "water", title: "喝水", group: group.id, pa
 `registerItem` 返回的句柄有 `update`，用来显示角标和条目下方的子项。只改传入的字段，可以随时调用：
 
 ```ts
-const item = context.sidebar.registerItem({ id: "groups", title: "分组", page });
+const item = context.sidebar.registerItem({
+  id: "groups",
+  title: "分组",
+  page,
+});
 
 item.update({
   badge: 3,
-  children: groups.map(group => ({
+  children: groups.map((group) => ({
     id: group.id,
     title: group.title,
     params: { group: group.id },
     tone: "blue",
     count: group.openCount,
     menu: [
-      { title: "编辑分组", run: () => page.open({ group: group.id, edit: true }) },
+      {
+        title: "编辑分组",
+        run: () => page.open({ group: group.id, edit: true }),
+      },
       { title: "删除分组", danger: true, run: () => removeGroup(group.id) },
     ],
-    onDrop: { type: "note", run: noteId => moveNote(noteId, group.id) },
+    onDrop: { type: "note", run: (noteId) => moveNote(noteId, group.id) },
   })),
   action: { title: "新建分组", run: () => page.open({ create: true }) },
 });
@@ -244,7 +353,9 @@ item.update({
 ```tsx
 <div
   draggable
-  onDragStart={event => event.dataTransfer.setData(context.sidebar.dragType("note"), note.id)}
+  onDragStart={(event) =>
+    event.dataTransfer.setData(context.sidebar.dragType("note"), note.id)
+  }
 >
   {note.title}
 </div>
@@ -259,7 +370,11 @@ item.update({
 ```tsx
 import type { PluginIconProps } from "@tau/plugins";
 
-export function WaterDropIcon({ size = 24, strokeWidth = 2, ...props }: PluginIconProps) {
+export function WaterDropIcon({
+  size = 24,
+  strokeWidth = 2,
+  ...props
+}: PluginIconProps) {
   return (
     <svg
       width={size}
@@ -331,7 +446,7 @@ context.actions.register({
   title: "转为问题",
   icon: MessageCircleQuestion,
   targets: ["card", "article", "document"],
-  run: async target => {
+  run: async (target) => {
     const [info] = await context.app.describe([target]);
     // …用 target 新建插件内容并关联
   },
@@ -373,7 +488,9 @@ import type { PluginEntityPanelProps } from "@tau/plugins";
 function RelatedNotes({ context, target }: PluginEntityPanelProps) {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    void context.entities.count({ kind: "note", where: { targetId: target.id } }).then(setCount);
+    void context.entities
+      .count({ kind: "note", where: { targetId: target.id } })
+      .then(setCount);
   }, [context, target.id]);
   if (!count) return null;
   return <p>有 {count} 条笔记提到了它</p>;
@@ -396,46 +513,6 @@ context.views.registerEntityPanel({
 - `target` 只是引用：读标题、正文仍按权限，挂在详情里不会自动获得读取权限。引用了卡片或文章的项目文档，收到的是被引用的卡片或文章。
 - 用户在详情页之间切换时，组件不会重新挂载，只换 `target`；按 `target` 取数据的 effect 要把它放进依赖。
 - 渲染出错时这一块显示错误和「重试」，不影响详情页其他内容。只在主窗口出现，独立编辑窗口不显示。
-
-## 设置
-
-```tsx
-import type { PluginSettingsProps } from "@tau/plugins";
-
-function Preferences({ context }: PluginSettingsProps) {
-  // 用 context.storage 读写设置值
-}
-
-const preferences = context.settings.register({
-  id: "preferences",
-  title: "计数设置",
-  description: "调整计数的步长",
-  component: Preferences,
-});
-```
-
-| 字段          | 说明                                                            |
-| ------------- | --------------------------------------------------------------- |
-| `id`          | 局部 ID                                                         |
-| `title`       | 设置区域的标题                                                  |
-| `description` | 可选。说明文字                                                  |
-| `component`   | React 组件，收到 `context`                                      |
-| `target`      | 服务提供方的配置表单才需要，见[服务提供方](providers/README.md) |
-
-设置区域显示在插件详情页的「设置」里。`register` 返回的句柄提供 `open()`，可以从命令或页面里跳转过去：
-
-```ts
-context.commands.register({
-  id: "open-preferences",
-  title: "打开计数设置",
-  run: async () => {
-    await preferences.open();
-    return null;
-  },
-});
-```
-
-设置值不会自动保存，组件需要自己用 [`context.storage`](storage-and-network.md) 读写。页面和设置同时显示同一份数据时，保存后要刷新另一处的状态，`storage` 本身不会通知变化。模板用 React Query 管理读取、保存和失败状态，可以照着写。
 
 ## 通知
 
@@ -538,9 +615,11 @@ export function Help() {
 - SVG 图片可以直接在 CSS 里用 `url()` 引用，构建时会内联进样式，不需要额外复制文件。
 - 如果你用 Tailwind 构建插件样式，可以导入 `@tau/plugins/tailwind.css`，它把 Tau 的主题变量映射成 Tailwind 语义类（如 `bg-surface`、`text-ink-1`）。Tau 不会替插件生成 Tailwind 样式，需要你在构建时自己编译，并按下一节给类名加前缀。
 
+在手机上，这些组件会适配触摸、系统返回键和安全区。布局的适配方法见[多端适配 · 适配不同的屏幕](portability.md#适配不同的屏幕)。
+
 ### 用 Tailwind 时加前缀
 
-插件的样式和 Tau、用户的博客模板加载在同一个页面里。Tailwind 的工具类名是通用的：你的 `.flex`、`.hidden` 和宿主的同名类是两条规则，插件样式加载得更晚，会把宿主 `hidden md:flex` 这类响应式写法覆盖掉，表现为宿主或博客的界面在某些宽度下错乱，而且只在用到你的插件的页面出现。
+插件的样式和 Tau、用户的博客模板加载在同一个页面里。Tailwind 的工具类名是通用的：你的 `.flex`、`.hidden` 和 Tau 的同名类是两条规则，插件样式加载得更晚，会把 Tau `hidden md:flex` 这类响应式写法覆盖掉，表现为 Tau 或博客的界面在某些宽度下错乱，而且只在用到你的插件的页面出现。
 
 所以 Tailwind 的类名要加插件专属的前缀，和前面说的「选择器加插件专属前缀」是同一条规则。Tailwind 4 在导入主题时声明前缀：
 

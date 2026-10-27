@@ -1,6 +1,6 @@
 # 存储与网络
 
-平台范围：context.storage 与声明 fetch 的原生网络适配已接桌面、Android 和 iOS。移动请求与响应各限 128 MiB，不承诺后台续传。结构化 records/entities/transaction 也不是 KV 的别名，移动尚未接入。详见 [API 支持矩阵](api-support.md)。
+保存插件自己的设置和进度、请求网络、和服务器保持长连接。这些接口在桌面和手机上用法相同。
 
 ## 私有存储
 
@@ -51,12 +51,9 @@ if (!response.ok) throw new Error(`请求失败：${response.status}`);
 const data: unknown = await response.json();
 ```
 
-与直接调用浏览器的 `fetch` 相比：
-
 - 请求由 Tau 代为发出，不受浏览器跨域（CORS）限制，也不会携带浏览器的 Cookie。需要认证时，自己在请求头里提供。
-- 插件停用时，进行中的请求会被自动取消。你也可以照常传入自己的 `signal`，两者任一中止都会取消请求。
-
-注意：
+- 插件停用时，进行中的请求会被自动取消。你也可以照常传入自己的 `signal`，两者任一中止都会取消请求，包括读取响应体的阶段。
+- 支持流式读取请求和响应。应用切到后台或被系统结束后，请求不会继续。
 
 - 和标准 `fetch` 一样，HTTP 4xx、5xx 不会抛出异常，要检查 `response.ok`。
 - 响应数据先校验再使用，尤其是写入存储之前。
@@ -65,4 +62,32 @@ const data: unknown = await response.json();
 
 ## WebSocket
 
-实时双向通信使用 `context.websocket.connect(url, protocols?, { headers, signal })`。它同步返回连接，标准事件、状态和 send/close 保持不变，背压由宿主处理。详见 [WebSocket](websocket.md)。ASR 插件的完整接入见 [语音识别](providers/asr.md)。需要 SDK 0.43.0 和对应新版宿主；默认计数器模板保留已发布 SDK 基线，开发未发布接口按快速开始的候选包流程验证。
+需要与服务器保持双向连接时（如实时语音识别、推送），用 `context.websocket.connect`。它返回一个和浏览器 `WebSocket` 用法相同的连接，事件、状态、`send`、`close` 都按标准工作：
+
+```ts
+const socket = context.websocket.connect("wss://api.example.com/stream", [], {
+  headers: { Authorization: `Bearer ${token}` },
+  signal,
+});
+socket.binaryType = "arraybuffer";
+socket.addEventListener("open", () =>
+  socket.send(JSON.stringify({ type: "start" })),
+);
+socket.addEventListener("message", (event) => handle(event.data));
+socket.addEventListener("error", () => fail(new Error("连接失败")));
+socket.addEventListener("close", (event) => finish(event.code, event.reason));
+```
+
+| 参数        | 说明                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `url`       | `wss://` 地址；`ws://` 只允许连本机。地址里不能带用户名密码和 `#` 片段                      |
+| `protocols` | 子协议，与标准构造函数的第二个参数相同                                                      |
+| `headers`   | 可选。握手请求头，常用于鉴权。不能设置 `Host`、`Connection`、`Upgrade` 和 `Sec-WebSocket-*` |
+| `signal`    | 可选。中止时关闭这条连接                                                                    |
+
+- 连接由 Tau 代为建立，不携带浏览器 Cookie，不自动重连，不跟随重定向。不要用 `instanceof WebSocket` 判断它。
+- `send` 和 `close` 都是同步的，发送顺序和排队由 Tau 处理，不需要自己做流量控制。`bufferedAmount` 只表示还没发出去的字节，不代表服务器已经收到。
+- 插件停用或切换工作区时，所有连接自动关闭。这时未发完的数据会被丢弃，不保证送达；正常结束时，先按服务的协议发送结束消息、等到最终结果，再调用 `close()`。
+- 连接失败、断线或超出限制时，先触发 `error`，再触发一次 `close`（关闭码 1006）。错误信息里不会包含你的请求头。
+
+限制：单条消息最多 1 MiB；发送和接收各自最多排队 2 MiB、256 条；每个窗口最多同时 32 条连接；握手和关闭各最多等 10 秒。超出时连接失败，不会悄悄丢消息。

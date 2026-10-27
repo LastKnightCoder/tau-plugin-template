@@ -1,6 +1,6 @@
 # 摘录
 
-如果你的插件从外部服务读取划线、批注或收藏（读书笔记、网页高亮、文献批注等），可以把它们写成 Tau 的**摘录**。写入后，用户能在全局搜索和 AI 对话中找到它们，在文档中引用，也能把它们转为卡片或问题。
+如果你的插件从外部服务读取划线、批注或收藏（读书笔记、网页高亮、文献批注等），可以把它们写成 Tau 的**摘录**（仅桌面）。写入后，用户能在全局搜索和 AI 对话中找到它们，在文档中引用，也能把它们转为卡片或问题。
 
 摘录属于用户：插件停用或卸载后，已经写入的摘录和引用都会保留。
 
@@ -18,7 +18,8 @@ const bookPage = context.pages.register({
 
 context.excerpts.register({
   label: "我的读书笔记",
-  open: ({ sourceKey, externalId }) => bookPage.open({ bookId: sourceKey, noteId: externalId }),
+  open: ({ sourceKey, externalId }) =>
+    bookPage.open({ bookId: sourceKey, noteId: externalId }),
 });
 ```
 
@@ -34,7 +35,11 @@ context.excerpts.register({
 摘录按**来源**分组写入，一个来源可以是一本书、一个网页或一篇文献。写入有两种方式：
 
 ```ts
-const source = { key: "book-42", title: "设计心理学", url: "https://example.com/books/42" };
+const source = {
+  key: "book-42",
+  title: "设计心理学",
+  url: "https://example.com/books/42",
+};
 
 // 全量：以这批条目为准，不在其中的已有条目会被移除
 await context.excerpts.replace(source, [
@@ -44,7 +49,11 @@ await context.excerpts.replace(source, [
     location: "第 1 章",
     time: 1760000000000,
   },
-  { externalId: "n2", quote: "示能决定了可能的操作。", note: "和交互设计课的观点一致" },
+  {
+    externalId: "n2",
+    quote: "示能决定了可能的操作。",
+    note: "和交互设计课的观点一致",
+  },
 ]);
 
 // 增量：只新增、更新或移除指定条目
@@ -104,16 +113,26 @@ const entries = await context.excerpts.items("book-42");
 ```tsx
 import { useEffect, useState } from "react";
 import { Button } from "@tau/ui";
-import type { PluginContext, PluginMaterialAction, PluginMaterialRef } from "@tau/plugins";
+import type {
+  PluginContext,
+  PluginMaterialAction,
+  PluginMaterialRef,
+} from "@tau/plugins";
 
-function NoteActions({ context, target }: { context: PluginContext; target: PluginMaterialRef }) {
+function NoteActions({
+  context,
+  target,
+}: {
+  context: PluginContext;
+  target: PluginMaterialRef;
+}) {
   const [actions, setActions] = useState<PluginMaterialAction[]>([]);
   useEffect(() => {
-    void context.materials.actions(target).then(list => {
+    void context.materials.actions(target).then((list) => {
       if (!context.signal.aborted) setActions(list);
     });
   }, [context, target]);
-  return actions.map(action => (
+  return actions.map((action) => (
     <Button key={action.id} variant="ghost" onClick={() => void action.run()}>
       {action.label}
     </Button>

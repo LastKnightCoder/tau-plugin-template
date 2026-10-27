@@ -2,19 +2,19 @@
 
 用户在 Tau 中发布博客时，Tau 会生成一组数据文件：站点信息、内容列表、每篇内容的正文和搜索索引。博客模板和独立站点读取这些数据来渲染页面。
 
-这一篇面向两类开发者：
-
 - **开发博客模板**：推荐直接使用 `@tau/blog`（npm 包 `@xiongtao.xt/tau-blog`）。它包含数据读取、搜索、正文渲染，以及内容插件（如[编辑器扩展](editor.md)中的自定义块）的接入，用法见该包的 README。
 - **只想读取数据、自己渲染的站点**：使用 SDK 中的 `@tau/plugins/publish-client` 和 `@tau/plugins/publish-data`，见下文。
 
-把文件送到远端的[发布提供方](providers/publish.md)是另一回事，与本篇无关。
+要把生成的站点文件送到远端，写的是[博客发布提供方](providers/publish.md)。
 
 ## 读取数据
 
 ```ts
 import { createClient } from "@tau/plugins/publish-client";
 
-const client = createClient({ manifestUrl: "https://example.com/data/site.<摘要>.json" });
+const client = createClient({
+  manifestUrl: "https://example.com/data/site.<摘要>.json",
+});
 const manifest = await client.readManifest();
 
 const item = manifest.items[0];

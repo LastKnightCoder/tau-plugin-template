@@ -1,10 +1,8 @@
-<!-- 由 scripts/plugins/sync-author-docs.mjs 从 packages/plugins/docs/whiteboard.md 生成，请勿单独编辑。 -->
-
 # 白板扩展
 
-本文描述仓库内已绑定协作文档的桌面白板作者接口，不能据此推断线上版本已可用。支持范围见 [API 支持矩阵](api-support.md)，协作约束见 [白板协作](whiteboard-collaboration.md)。
+在 Tau 的白板上加一种自己的元素（图形、图表、组件），以及在工具栏里创建它的工具。白板扩展目前只在桌面可用，manifest 里只声明 `desktop`。
 
-白板扩展让你在 Tau 的白板上添加自己的元素（如图形、图表、组件），以及创建它们的工具。白板扩展分为两部分：
+白板扩展分为两部分：
 
 - **元素**：静态声明，描述元素长什么样、能怎么交互。没有打开任何画布时，Tau 也需要读取这些声明，例如生成预览图。
 - **交互贡献**：每块画布单独创建，提供工具、命令、属性面板、快捷键等。
@@ -15,17 +13,19 @@
 
 ```json
 {
+  "categories": ["whiteboard"],
   "targets": { "desktop": { "minAppVersion": "0.59.5" } }
 }
 ```
-
-这里的客户端版本是源码验收候选，不是已发布兼容承诺；上架前须使用实际发行的客户端核对版本下限。本文示例使用 SDK 0.45.0 的白板作者接口；从旧 SDK 升级须按[协作约束](whiteboard-collaboration.md)适配身份命令、数据版本和文本绑定。白板只声明 desktop，SDK 发布不代表对应客户端已发行。
 
 ### 2. 定义扩展
 
 ```tsx
 import { definePlugin } from "@tau/plugins";
-import { defineElement, defineWhiteboardExtension } from "@tau/plugins/whiteboard";
+import {
+  defineElement,
+  defineWhiteboardExtension,
+} from "@tau/plugins/whiteboard";
 
 declare const __PLUGIN_META__: { id: string; name: string; version: string };
 
@@ -67,7 +67,12 @@ const boxExtension = defineWhiteboardExtension({
       create: {
         gesture: "drag",
         defaultSize: [160, 90],
-        build: ({ rect }) => ({ id: crypto.randomUUID(), type: BOX, ...rect, data: {} }),
+        build: ({ rect }) => ({
+          id: crypto.randomUUID(),
+          type: BOX,
+          ...rect,
+          data: {},
+        }),
       },
     }),
   ],
@@ -86,7 +91,10 @@ const boxExtension = defineWhiteboardExtension({
   }),
 });
 
-export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExtension] });
+export default definePlugin({
+  ...__PLUGIN_META__,
+  whiteboardExtensions: [boxExtension],
+});
 ```
 
 ### 3. 构建、安装、重启
@@ -103,7 +111,7 @@ export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExte
 
 ## 元素
 
-渲染与创建回调沿用元素的 `x/y/width/height` 外壳，你自己的数据放在 `data` 里。`api.getElement/getSnapshot` 返回的只读作者快照则以 `geometry` 承载完整几何；写命令时使用该对象，不把渲染回调的顶层坐标直接当作补丁。
+渲染和创建回调收到的元素有 `x`、`y`、`width`、`height`，你自己的数据放在 `data` 里。通过 `api` 读取元素时，位置和尺寸在 `geometry` 里；修改时也传 `geometry`，见[修改画布](#修改画布)。
 
 ### 元素声明
 
@@ -115,10 +123,10 @@ export default definePlugin({ ...__PLUGIN_META__, whiteboardExtensions: [boxExte
 | `create`                   | 可选。创建方式，声明后才能注册创建型工具，见[创建工具](#创建工具)                    |
 | `interaction`              | 可选。缩放手柄与连接点，见下文                                                       |
 | `schema`                   | 可选。约束 `data` 结构的 [Standard Schema](https://standardschema.dev)，必须同步校验 |
-| `dataVersion`              | 必填正整数；表示业务数据版本，与插件发行版本分开                                     |
-| `collaboration.textFields` | 可选，data 中需要协作编辑的顶层字符串字段                                            |
-| `resources`                | 可选，data 中资源位置的纯数据声明；不授予读取或上传权限                              |
-| `previousVersions`         | 可选，精确历史版本及其读取、编辑权限；不执行版本转换                                 |
+| `dataVersion`              | `data` 结构的版本，正整数，从 `1` 开始，与插件版本号无关，见[数据版本](#数据版本)    |
+| `collaboration.textFields` | 可选。`data` 里需要多人同时编辑的顶层字符串字段，修改方式见[文本字段](#文本字段)     |
+| `resources`                | 可选。`data` 里的图片、附件地址字段，复制和导出时 Tau 据此找到资源                   |
+| `previousVersions`         | 可选。旧版本的元素声明，见[数据版本](#数据版本)                                      |
 | `sketch`                   | 可选。为 `true` 时元素支持手绘画风，见[手绘画风](#手绘画风)                          |
 | `schematic`                | 可选。简略预览，见[简略预览](#简略预览)                                              |
 
@@ -154,9 +162,9 @@ interaction: {
 
 `presentation.getName(element)` 返回元素在列表中显示的名称，例如便签显示它的文字。用户手动起的名字优先；返回空时显示 `label`。
 
-### 版本读取边界
+### 数据版本
 
-数据结构有不兼容变化时提高 `dataVersion`，登记需要读取或编辑的精确历史定义：
+`data` 的结构有不兼容的变化（字段改名、文本字段变了）时，把 `dataVersion` 加一，并把上一版的声明放进 `previousVersions`：
 
 ```ts
 const sourceV1 = defineElement({
@@ -173,7 +181,9 @@ const sourceV2 = defineElement({
 });
 ```
 
-宿主不提供数据升级或旧格式转换。已有元素使用保存时的精确契约，缺少对应定义时保留原数据并禁写。新插入元素使用当前版本。
+- Tau 不会转换已有的数据。旧白板里的元素仍按保存时的版本、用旧声明渲染；新创建的元素用当前版本。
+- `access` 为 `edit` 时旧元素可以继续编辑，`read` 只能看，`none` 只保留数据。没有列进 `previousVersions` 的旧版本，显示为占位，数据原样保留，仍可移动、复制、删除。
+- 只改渲染或新增可选字段时，不需要提高版本。
 
 ## 创建工具
 
@@ -242,18 +252,22 @@ panel: ({ run }) => (
 
 ### 修改画布
 
-通过 `api` 修改画布，不要直接修改读到的元素对象：
+通过 `api` 修改画布，不要直接修改读到的元素对象。所有修改都进入白板的撤销记录，并同步给协作者。
 
-| 方法                                      | 用途                                                          |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| `api.updateElement(id, patch)`            | 修改 name、完整 geometry、style                               |
-| `api.submit(commands, options?)`          | 提交 create/set_node/set_data/move_node/remove_nodes 身份命令 |
-| `api.select(ids)`                         | 设置选区                                                      |
-| `api.getElement(id)`、`api.getSnapshot()` | 读取元素与画布快照                                            |
-| `api.setActiveTool(id)`                   | 切换当前工具                                                  |
-| `api.readonly`                            | 画布是否只读                                                  |
+| 方法                                                          | 用途                                                    |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| `api.getElement(id)`、`api.getSnapshot()`                     | 读取元素与当前页的快照，只读                            |
+| `api.updateElementData(id, patch, { unset?, historyGroup? })` | 修改自己元素的 `data`，没写的字段保留；`unset` 删除字段 |
+| `api.updateElement(id, patch)`                                | 修改 `name`、完整的 `geometry` 或 `style`               |
+| `api.getTextBinding(id, field)`                               | 编辑文本字段，见[文本字段](#文本字段)                   |
+| `api.submit(commands, { historyGroup? })`                     | 批量创建、移动、删除元素，见下文                        |
+| `api.select(ids)`                                             | 设置选区                                                |
+| `api.setActiveTool(id)`                                       | 切换当前工具                                            |
+| `api.readonly`                                                | 画布是否只读                                            |
 
-普通业务属性使用 `api.updateElementData(id, patch, { unset?, historyGroup? })`，未指定字段保留；文本字段使用 `api.getTextBinding(id, field)` 的观察修订与增量编辑，不通过普通 patch 覆盖。
+元素组件里用 `useWhiteboardAPI()` 拿到所属扩展的 `api`。
+
+`submit` 接收一组命令，全部成功才生效，有一条失败就都不写入，返回新建元素的 `createdIds`：
 
 ```ts
 const pageId = api.getSnapshot().pageId;
@@ -271,9 +285,48 @@ const { createdIds } = api.submit([
 api.updateElementData(createdIds[0], { label: "方块" });
 ```
 
-命令不接受数组路径、契约 ID、Y.Doc 或共享根；返回值仅表示本机接纳。手势、字段输入和批量命令共用宿主历史，不自行再记撤销栈。异步结果使用 `captureSubmission` 检查生命周期，但这不是内容修订比较；整段文本条件替换只能走已提供的宿主条件入口，冲突时保留草稿，不擅自读取新值后覆盖。当前冻结作者 API 不提供通用异步 CAS。
+| 命令           | 作用                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| `create`       | 新建元素，`parent` 为 `{ kind: "page" \| "element", id }`，可用 `beforeId` 或 `afterId` 指定位置 |
+| `set_node`     | 修改元素的名称、几何或样式                                                                       |
+| `set_data`     | 修改元素的 `data`                                                                                |
+| `move_node`    | 把元素移到另一个父级下，用 `beforeId` 或 `afterId` 指定位置                                      |
+| `remove_nodes` | 删除元素                                                                                         |
 
-这些方法统一处理只读、撤销和生命周期。元素组件中可以用 `useWhiteboardAPI()` 拿到所属扩展的 `api`。
+- 元素一律用 ID 指定。
+- `historyGroup` 把几次修改合成一步撤销，只在本机生效，不是事务。
+- 返回值只表示本机已接受，保存状态由 Tau 显示。
+- 一次最多 256 条命令、512 KiB；单个 `data` 修改最多 64 KiB。超出时整批拒绝。
+
+### 文本字段
+
+`collaboration.textFields` 里的字段要通过文本句柄修改，不要用 `updateElementData` 整段覆盖，这样两人同时编辑时会按字符合并：
+
+```tsx
+function StickyEditor({ element }: { element: WhiteboardElement<StickyData> }) {
+  const api = useWhiteboardAPI();
+  const [binding] = useState(() => api.getTextBinding(element.id, "text"));
+  useEffect(() => () => binding.dispose(), [binding]);
+  // binding.getSnapshot() 读取 { value, revision }，binding.subscribe(...) 监听变化
+  // 修改：binding.edit({ offset, remove, text, revision })
+}
+```
+
+- 在组件里取一次句柄并复用，卸载时调用 `dispose`。页面隐藏后组件的 effect 会清理，句柄随之失效，再次显示时重新取。
+- 修改时带上读取时的 `revision`。版本过期或文档变成只读时，修改会被拒绝；这时保留用户的输入，不要读取新值后直接覆盖。
+
+### 异步操作
+
+插件停用、切换工作区、画布关闭或变成只读后，迟到的修改会被拒绝。异步操作开始前调用 `api.captureSubmission(elementId)`，它返回一个检查函数；`await` 结束后先调用它，返回 `false` 就放弃这次结果：
+
+```ts
+const stillValid = api.captureSubmission(element.id);
+const title = await fetchTitle(url);
+if (!stillValid()) return;
+api.updateElementData(element.id, { title });
+```
+
+它只检查画布、元素和权限是否还有效，不检查内容有没有被别人改过。
 
 ## 手绘画风
 
@@ -301,12 +354,15 @@ schematic: element => [
 交互贡献需要保存用户偏好（如上次选的颜色）时，在扩展上声明依赖存储服务：
 
 ```ts
-import { IPluginStorage, defineWhiteboardExtension } from "@tau/plugins/whiteboard";
+import {
+  IPluginStorage,
+  defineWhiteboardExtension,
+} from "@tau/plugins/whiteboard";
 
 defineWhiteboardExtension({
   id: __PLUGIN_META__.id,
   elements: [/* ... */],
-  create: api => {
+  create: (api) => {
     const storage = api.getService(IPluginStorage);
     // storage.get / set / delete，与 context.storage 相同
     return { tools: [/* ... */] };
@@ -314,7 +370,7 @@ defineWhiteboardExtension({
 });
 ```
 
-- 存储按插件和工作区隔离，与 `context.storage` 是同一份数据。
+- 存储按插件和工作区隔离，与 `context.storage` 是同一份数据。它保存的是插件偏好，不随白板同步给协作者。
 - 只在交互贡献、工具面板、属性面板和 `create.build` 中使用。元素的 `render` 和 `schematic` 只能依据元素数据，不能读存储。
 - 读取失败时不要当成空数据再写回，否则会覆盖用户原有的偏好。
 
@@ -326,3 +382,10 @@ defineWhiteboardExtension({
 ## 停用与卸载
 
 插件停用或卸载后，白板里已有的元素会保留，显示为未知元素的占位；重新安装并启用后恢复显示。保存、复制白板时也会保留这些元素的数据。
+
+## 测试
+
+- 新旧两版插件分别打开同一块白板，旧元素按 `access` 正常显示或只读。
+- 两台设备同时编辑同一个文本字段，中文和 emoji 都能正确合并；撤销只撤自己的修改。
+- 异步操作进行中关闭画布，结果不会写进去。
+- 复制元素到另一块白板，图片等资源跟着过去。

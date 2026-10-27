@@ -1,15 +1,11 @@
 # 插件的组成
 
-默认模板维护作者清单，构建器生成格式 3 发行清单；平台声明与静态注册见[跨端契约](portability.md)。作者不手写包格式、入口或摘要。
+一个 Tau 插件包含：
 
-一个 Tau 插件由以下几部分组成：
-
-- **manifest.json**：插件是谁、需要什么。Tau 不运行代码就能读到它。
+- **manifest.json**：插件是谁、支持哪些平台、需要哪些权限。Tau 不运行代码就能读到它。
 - **入口模块**（构建后是 `main.js`）：默认导出一个插件定义，包含静态声明和运行时逻辑。
 - **样式**（构建后是 `main.css`，可选）。
 - **Skill 目录**（`skills/<id>/`，可选）：给 AI 看的使用说明，见 [Skill](skills.md)。
-
-这一篇依次讲 manifest 和入口，以及贯穿所有能力的几条规则：生命周期、`context`、ID、取消与清理。
 
 ## manifest
 
@@ -19,10 +15,10 @@
 {
   "id": "example.external-counter",
   "name": "计数器示例",
-  "description": "在侧边栏记录并保存计数。",
+  "description": "在功能入口中记录并保存计数。",
   "categories": ["page"],
   "keywords": ["计数", "打卡"],
-  "version": "1.0.0",
+  "version": "1.2.3",
   "targets": {
     "desktop": { "minAppVersion": "0.59.4" },
     "android": { "minAppVersion": "0.2.4" },
@@ -39,11 +35,11 @@
 | `name`        | 插件名称，显示在插件页和插件中心                                                                |
 | `description` | 一句话简介，非空文本                                                                            |
 | `version`     | 插件版本，格式为 `主版本.次版本.修订号`，可带预发布后缀，如 `1.2.0-beta.1`                      |
-| `targets`     | 各平台最低应用版本；填写完整版本号，不写范围。省略平台表示不支持安装                            |
+| `targets`     | 支持的平台（`desktop`、`android`、`ios`）和各平台的最低客户端版本，见[多端适配](portability.md) |
 | `categories`  | 插件中心的分类，可多选，也可以不写，见下表                                                      |
 | `keywords`    | 插件中心的搜索词，用于搜索的文本。例如 S3 插件可以写 `MinIO`、`R2`                              |
 | `permissions` | 插件可能申请的用户数据权限，见[用户数据 · 权限](user-data.md#权限)和 [AI](ai.md)                |
-| `backend`     | 需要本机后台时填写，同时把 `formatVersion` 改为 `2`，见[本机后台](backend.md)                   |
+| `backend`     | 需要本机后台时填写，这类插件的 manifest 写法不同，见[本机后台](backend.md)                      |
 
 | 分类            | 适合的插件                    |
 | --------------- | ----------------------------- |
@@ -52,16 +48,18 @@
 | `skill`         | Skill 包，或附带 Skill 的插件 |
 | `sync`          | 同步存储                      |
 | `upload`        | 图片与附件上传                |
-| `voice`         | 语音合成                      |
+| `editor`        | 编辑器块                      |
+| `whiteboard`    | 白板元素                      |
+| `voice`         | 语音合成、语音识别            |
 | `video`         | 在线视频来源                  |
 | `blog-publish`  | 博客发布目标                  |
 | `blog-template` | 博客模板                      |
 
 分类只影响插件中心的展示，不授予任何能力。只提供命令或普通设置的插件可以不写分类。
 
-### 保持模板值的字段
+### 由构建生成的字段
 
-`formatVersion`、`apiVersion`、`platform`、`profile`、`format`、`main` 按所选协议保持一致。`styles` 和 `integrity` 由构建生成；纯 Markdown Skill 从目录收集。不要直接修改 ZIP。
+包格式、入口文件、样式和文件摘要由 `pnpm build` 写进插件包里的 manifest，不需要手写。不要直接修改构建出的 ZIP，摘要对不上时 Tau 会拒绝安装。
 
 ## 入口与插件定义
 
@@ -97,7 +95,7 @@ export default definePlugin({
 | ---------------------- | ---------- | --------------------------------------------------------------------- |
 | `create`               | 运行时逻辑 | 每次启用时调用，返回本次运行的实例。只有静态声明的插件可以省略        |
 | `editorExtensions`     | 静态声明   | 编辑器块，见[编辑器扩展](editor.md)                                   |
-| `editorMetrics`        | 静态声明   | 自定义节点的统计字段，见[正文字数](content-metrics.md) |
+| `editorMetrics`        | 静态声明   | 自定义块参与字数统计的字段，见[编辑器扩展](editor.md#字数统计)        |
 | `editorCodecs`         | 静态声明   | 编辑器块的 Markdown 转换，见[编辑器扩展](editor.md#markdown-导入导出) |
 | `whiteboardExtensions` | 静态声明   | 白板元素与工具，见[白板扩展](whiteboard.md)                           |
 | `ai`                   | 静态声明   | 插件自定义的 AI 功能，见 [AI](ai.md#自定义-ai-功能)                   |
@@ -121,8 +119,6 @@ create: () => ({
 - **停用**：用户停用插件、切换工作区，或者 Tau 退出时，本次运行结束。通过 `context` 注册的命令、页面、设置等全部自动撤销，`context.signal` 被中止，然后调用 `deactivate`（如果有）。
 - **再次启用**：重新调用 `create()` 和 `activate()`，拿到一个全新的 `context`。
 
-据此有几条规则：
-
 - 运行状态放在 `create` 返回的闭包或 React 组件里，不放在模块顶层。模块只会加载一次，顶层变量会跨越多次启用残留下来。
 - 需要跨启用、跨重启保留的数据，存进 [`context.storage`](storage-and-network.md)。
 - `activate` 应尽快返回。不要在里面等待用户操作或永不结束的任务；长时间的工作在后台启动，并响应 `context.signal`。
@@ -133,36 +129,38 @@ create: () => ({
 
 `activate` 收到的 `context` 是插件使用 Tau 能力的唯一入口。页面、设置组件也会通过 props 拿到同一个 `context`。
 
-| 属性                                                  | 用途                                         | 文档                                          |
-| ----------------------------------------------------- | -------------------------------------------- | --------------------------------------------- |
-| `pluginId`、`workspaceId`                             | 当前插件 ID 与工作区 ID（不要解析工作区 ID） |                                               |
-| `signal`                                              | 本次运行结束时中止                           | [取消与清理](#取消与清理)                     |
-| `environment`、`navigation`                           | 当前环境与语义功能入口                       | [跨端契约](portability.md)                    |
-| `register`                                            | 托管需要清理的资源                           | [取消与清理](#取消与清理)                     |
-| `commands`                                            | 注册命令                                     | [界面](ui.md#命令)                            |
-| `pages`、`sidebar`                                    | 注册页面与侧边栏入口                         | [界面](ui.md#页面)                            |
-| `home`                                                | 注册首页面板                                 | [界面](ui.md#首页面板)                        |
-| `actions`                                             | 在卡片、文章、项目文档的菜单里加动作         | [界面](ui.md#对象动作)                        |
-| `views`                                               | 在卡片、文章、项目文档详情里放区块           | [界面](ui.md#详情区块)                        |
-| `settings`                                            | 注册设置区域                                 | [界面](ui.md#设置)                            |
-| `notifications`                                       | 发送通知                                     | [界面](ui.md#通知)                            |
-| `storage`                                             | 插件私有存储                                 | [存储与网络](storage-and-network.md)          |
-| `fetch`                                               | 网络请求                                     | [存储与网络](storage-and-network.md#网络请求) |
-| `permissions`                                         | 查询与申请权限                               | [用户数据](user-data.md#权限)                 |
-| `data`、`content`、`events`                           | 读写用户数据与正文、订阅变化                 | [用户数据](user-data.md)                      |
-| `app`                                                 | 选择与打开已有内容、导出与演示               | [用户数据](user-data.md#选择并打开已有内容)   |
-| `entities`                                            | 插件自己的内容                               | [用户数据](user-data.md#插件内容)             |
-| `excerpts`、`materials`                               | 摘录与材料动作                               | [摘录](excerpts.md)                           |
-| `ai`                                                  | 调用大模型                                   | [AI](ai.md)                                   |
-| `mcp`、`chat`                                         | 给 AI 提供工具、自定义工具结果的展示         | [MCP 工具](mcp.md)                            |
-| `flashcards`                                          | 闪卡                                         | [闪卡](flashcards.md)                         |
-| `services`                                            | 编译与转换服务                               | [编译与转换服务](services.md)                 |
-| `backend`                                             | 调用本机后台                                 | [本机后台](backend.md)                        |
-| `sync`、`upload`、`tts`、`images`、`video`、`publish` | 注册服务提供方                               | [服务提供方](providers/README.md)             |
+| 属性                                                         | 用途                                         | 文档                                           |
+| ------------------------------------------------------------ | -------------------------------------------- | ---------------------------------------------- |
+| `pluginId`、`workspaceId`                                    | 当前插件 ID 与工作区 ID（不要解析工作区 ID） |                                                |
+| `signal`                                                     | 本次运行结束时中止                           | [取消与清理](#取消与清理)                      |
+| `environment`                                                | 当前平台与指针类型                           | [多端适配](portability.md#读取运行环境)        |
+| `register`                                                   | 托管需要清理的资源                           | [取消与清理](#取消与清理)                      |
+| `commands`                                                   | 注册命令                                     | [界面](ui.md#命令)                             |
+| `pages`、`navigation`                                        | 注册页面与功能入口                           | [界面](ui.md#页面)                             |
+| `sidebar`                                                    | 桌面侧边栏的分组、角标与子项                 | [界面](ui.md#侧边栏)                           |
+| `home`                                                       | 注册首页面板                                 | [界面](ui.md#首页面板)                         |
+| `actions`                                                    | 在卡片、文章、项目文档的菜单里加动作         | [界面](ui.md#对象动作)                         |
+| `views`                                                      | 在卡片、文章、项目文档详情里放区块           | [界面](ui.md#详情区块)                         |
+| `settings`                                                   | 注册设置区域                                 | [界面](ui.md#设置)                             |
+| `notifications`                                              | 发送通知                                     | [界面](ui.md#通知)                             |
+| `storage`                                                    | 插件私有存储                                 | [存储与网络](storage-and-network.md)           |
+| `fetch`                                                      | 网络请求                                     | [存储与网络](storage-and-network.md#网络请求)  |
+| `websocket`                                                  | WebSocket 连接                               | [存储与网络](storage-and-network.md#websocket) |
+| `permissions`                                                | 查询与申请权限                               | [用户数据](user-data.md#权限)                  |
+| `data`、`content`、`events`                                  | 读写用户数据与正文、订阅变化                 | [用户数据](user-data.md)                       |
+| `app`                                                        | 选择与打开已有内容、导出与演示               | [用户数据](user-data.md#选择并打开已有内容)    |
+| `entities`                                                   | 插件自己的内容                               | [用户数据](user-data.md#插件内容)              |
+| `excerpts`、`materials`                                      | 摘录与材料动作                               | [摘录](excerpts.md)                            |
+| `ai`                                                         | 调用大模型                                   | [AI](ai.md)                                    |
+| `mcp`、`chat`                                                | 给 AI 提供工具、自定义工具结果的展示         | [MCP 工具](mcp.md)                             |
+| `flashcards`                                                 | 闪卡                                         | [闪卡](flashcards.md)                          |
+| `services`                                                   | 编译与转换服务                               | [编译与转换服务](services.md)                  |
+| `backend`                                                    | 调用本机后台                                 | [本机后台](backend.md)                         |
+| `sync`、`upload`、`tts`、`asr`、`images`、`video`、`publish` | 注册服务提供方                               | [服务提供方](providers/README.md)              |
 
 ## ID 规则
 
-命令、页面、设置、侧边栏条目、MCP 等注册时填写的 `id` 都是**插件内的局部 ID**：Tau 会自动加上插件命名空间，你不需要也不应该自己拼接插件 ID。不同插件可以使用相同的局部 ID，互不影响。
+命令、页面、功能入口、设置、侧边栏条目、MCP 等注册时填写的 `id` 都是**插件内的局部 ID**：Tau 会自动加上插件命名空间，你不需要也不应该自己拼接插件 ID。不同插件可以使用相同的局部 ID，互不影响。
 
 局部 ID 和存储的 key 都是 1 至 128 个字符，以字母或数字开头，后面可以是字母、数字、点、横线和下划线。同一类注册里重复的 ID 会报错。
 
@@ -171,7 +169,11 @@ create: () => ({
 **通过 `context` 注册的东西都会自动清理**，包括命令、页面、设置、侧边栏、MCP、通知、事件订阅等。注册方法返回的 `Disposable` 可以用来提前撤销：
 
 ```ts
-const command = context.commands.register({ id: "temp", title: "临时命令", run: () => null });
+const command = context.commands.register({
+  id: "temp",
+  title: "临时命令",
+  run: () => null,
+});
 // 不再需要时
 await command.dispose();
 ```
@@ -184,7 +186,9 @@ context.register({ dispose: () => clearInterval(timer) });
 
 const onOnline = () => refresh();
 window.addEventListener("online", onOnline);
-context.register({ dispose: () => window.removeEventListener("online", onOnline) });
+context.register({
+  dispose: () => window.removeEventListener("online", onOnline),
+});
 ```
 
 React 组件内的订阅照常在 `useEffect` 的清理函数里处理。
@@ -206,6 +210,6 @@ setState(result);
 
 ## 运行环境
 
-插件代码与 Tau 运行在同一个浏览器环境中，可以使用标准的 Web API 和浏览器兼容的 npm 包，但不能导入 Node.js 内置模块（`fs`、`path`、`child_process` 等）。需要 Node.js 能力时，使用[本机后台](backend.md)。
+插件代码与 Tau 运行在同一个浏览器环境中（桌面是 Electron 窗口，手机是系统 WebView），可以使用标准的 Web API 和浏览器兼容的 npm 包，但不能导入 Node.js 内置模块（`fs`、`path`、`child_process` 等）。需要 Node.js 能力时，使用[本机后台](backend.md)（仅桌面）。
 
-插件中心会审核提交的版本，但插件与 Tau 之间没有安全沙箱。只申请功能确实需要的权限，不要把密钥、令牌或你机器上的路径写进源码和插件包。
+插件中心会审核提交的版本，但插件与 Tau 之间没有安全沙箱，平台检查、文件摘要和权限声明都不能防住恶意代码。只申请功能确实需要的权限，不要把密钥、令牌或你机器上的路径写进源码和插件包。

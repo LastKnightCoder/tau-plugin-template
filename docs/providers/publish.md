@@ -2,7 +2,7 @@
 
 发布提供方让用户把 Tau 生成的博客站点发布到你接入的目标，比如对象存储、静态托管服务或 Git 仓库。Tau 负责生成站点文件、计算增量、重试和清理旧文件；插件只负责把文件送到远端。
 
-先读[服务提供方](README.md)了解共同的写法。开发博客模板或独立站点请看[站点数据](../site-data.md)。
+先读[服务提供方](README.md)了解共同的写法。开发博客模板或独立站点请看[站点数据](../site-data.md)。博客发布只在桌面可用。
 
 ## 两种发布方式
 
@@ -32,7 +32,10 @@ context.publish.register({
         };
       },
       async checkConnection(signal) {
-        const response = await context.fetch(settings.endpoint, { method: "HEAD", signal });
+        const response = await context.fetch(settings.endpoint, {
+          method: "HEAD",
+          signal,
+        });
         return response.ok;
       },
       async uploadFile(path, content, signal) {
@@ -41,7 +44,8 @@ context.publish.register({
           body: content,
           signal,
         });
-        if (!response.ok) throw new Error(`上传 ${path} 失败：${response.status}`);
+        if (!response.ok)
+          throw new Error(`上传 ${path} 失败：${response.status}`);
       },
       async deleteFile(path, signal) {
         const response = await context.fetch(`${settings.endpoint}/${path}`, {
@@ -119,11 +123,22 @@ context.settings.register({
   id: "publish",
   title: "我的存储",
   target: "publish",
-  form: { groups: [{ title: "账号", fields: [{ key: "token", label: "Token", type: "secret" }] }] },
+  form: {
+    groups: [
+      {
+        title: "账号",
+        fields: [{ key: "token", label: "Token", type: "secret" }],
+      },
+    ],
+  },
 });
 ```
 
-组件收到 `publishConfig`：`value` 和 `save(value)`。表单显示在「站点设置 · 发布目标」的卡片里，位于 Tau 的连接状态和「服务」行之后。为了和周围的界面一致：
+表单同时出现在两处：插件详情的「设置」里，点保存时测试连接；博客发布页的站点设置抽屉里，随输入自动保存。需要选择本机目录（如 Git 缓存目录）时，用 `service-choice` 字段，`service` 写 `git.cacheDirectory`；只在某个开关打开时才需要的字段用 `visibleWhen`。保存配置不会改变当前选用的发布目标。字段写法见[同步存储 · 配置表单](sync.md#配置表单)。
+
+### 自定义组件
+
+扫码登录等表单表达不了的交互，改用组件。组件收到 `publishConfig`：`value` 和 `save(value)`。它显示在「站点设置 · 发布目标」的卡片里，位于 Tau 的连接状态和「服务」行之后。为了和周围的界面一致：
 
 - **按行排列**：每行左侧是 64px 宽的标签，右侧是控件；行高至少 46px，内边距 `8px 12px`，行与行之间用 `--tau-line-2` 的顶部边线分隔。标签字号用 `--tau-text-meta`，颜色用 `--tau-ink-2`。
 - **不要再包一层卡片或标题**。
@@ -142,5 +157,3 @@ context.settings.register({
 ## 测试清单
 
 用真实的远端验证成功之后，再声称支持该目标。至少覆盖：配置保存失败、连接失败、重复发布、远端文件已存在或已删除、用户取消、插件停用、切换工作区，以及快照提交中途失败后的重试。
-
-连接配置以 form 声明，在插件页显式保存；博客发布页的站点设置抽屉里同一份表单随抽屉自动保存。需要宿主选择目录时用 `service-choice` 字段（如 `service: "git.cacheDirectory"`，标识存 key、显示名存 labelKey）；只在某个开关打开时才需要的字段用 `visibleWhen`。扫码登录等声明不了的交互可保留 component；保存配置不改变当前发布目标。

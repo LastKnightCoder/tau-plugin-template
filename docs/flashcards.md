@@ -1,6 +1,6 @@
 # 闪卡
 
-插件可以帮用户创建闪卡。有三种方式，从轻到重：
+插件可以帮用户创建闪卡（仅桌面）。按插件介入的多少，从轻到重有这些方式：
 
 | 方式                            | 适合                                      | 需要的权限                                              |
 | ------------------------------- | ----------------------------------------- | ------------------------------------------------------- |
@@ -11,7 +11,13 @@
 在 manifest 中声明用到的权限：
 
 ```json
-{ "permissions": ["flashcards:read", "flashcards:write", "ai:flashcardGeneration"] }
+{
+  "permissions": [
+    "flashcards:read",
+    "flashcards:write",
+    "ai:flashcardGeneration"
+  ]
+}
 ```
 
 AI 制卡沿用用户在 Tau 中为「闪卡制作」分配的模型，不需要插件另外配置。用量、额度与授权方式和 [AI](ai.md#使用-tau-已有的模型分配) 中的 `requestCapability` 相同，用户撤销授权会取消进行中的生成。
@@ -52,7 +58,9 @@ const result = await context.flashcards.openCreate({
 await context.flashcards.openCreate({
   mode: "ai",
   content: snapshot.markdown,
-  references: [{ refType: "content", contentRef: card.contentRef, title: card.title }],
+  references: [
+    { refType: "content", contentRef: card.contentRef, title: card.title },
+  ],
 });
 ```
 
@@ -62,13 +70,19 @@ await context.flashcards.openCreate({
 
 ```ts
 const decks = await context.flashcards.listDecks();
-const deck = await context.flashcards.createDeck({ name: "力学", description: "基础概念" });
+const deck = await context.flashcards.createDeck({
+  name: "力学",
+  description: "基础概念",
+});
 
 const card = await context.flashcards.createCard({
   deckId: deck.id,
   type: "qa",
   prompt: [
-    { type: "paragraph", children: [{ type: "formatted", text: "牛顿第二定律的表达式是什么？" }] },
+    {
+      type: "paragraph",
+      children: [{ type: "formatted", text: "牛顿第二定律的表达式是什么？" }],
+    },
   ],
   data: { answer: "F = ma" },
   tags: ["力学"],
@@ -104,7 +118,10 @@ const card = await context.flashcards.createCard({
 
 ```ts
 // 只生成草稿，插件可以先筛选，再逐张 createCard
-const drafts = await context.flashcards.generate({ content: "需要学习的内容", title: "资料" });
+const drafts = await context.flashcards.generate({
+  content: "需要学习的内容",
+  title: "资料",
+});
 
 // 生成后直接保存，跳过用户预览
 const result = await context.flashcards.generateAndSave({

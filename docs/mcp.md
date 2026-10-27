@@ -1,6 +1,6 @@
 # MCP 工具
 
-通过 `context.mcp.register`，你可以给 Tau 的 AI 助手提供工具。用户和 AI 对话时，AI 会按需调用这些工具，比如查询插件里的数据、在插件里执行操作。
+通过 `context.mcp.register`，你可以给 Tau 的 AI 助手提供工具（仅桌面）。用户和 AI 对话时，AI 会按需调用这些工具，比如查询插件里的数据、在插件里执行操作。
 
 注册的工具会出现在 Tau 的 MCP 页面和聊天的快捷面板里，用户可以整组或逐个开关工具。插件不需要自己做管理界面。
 
@@ -30,7 +30,9 @@ context.mcp.register({
         if (typeof args.key !== "string") throw new Error("请提供笔记的键");
         const note = await context.storage.get(args.key);
         signal.throwIfAborted();
-        return { content: note === undefined ? "未找到笔记" : JSON.stringify(note) };
+        return {
+          content: note === undefined ? "未找到笔记" : JSON.stringify(note),
+        };
       },
     },
   ],
@@ -69,7 +71,10 @@ context.mcp.register({
 context.mcp.register({
   id: "remote",
   name: "知识服务",
-  transport: { type: "streamable-http", url: "https://your-service.example/mcp" },
+  transport: {
+    type: "streamable-http",
+    url: "https://your-service.example/mcp",
+  },
 });
 ```
 
@@ -83,7 +88,9 @@ context.mcp.register({
 {
   "backend": {
     "systemAccess": ["process"],
-    "tools": [{ "id": "mcp", "command": "node", "args": ["/path/to/your-server.mjs"] }]
+    "tools": [
+      { "id": "mcp", "command": "node", "args": ["/path/to/your-server.mjs"] }
+    ]
   }
 }
 ```
@@ -94,7 +101,11 @@ context.mcp.register({
 context.mcp.register({
   id: "local-server",
   name: "本地 MCP 服务",
-  transport: { type: "stdio", command: "node", args: ["/path/to/your-server.mjs"] },
+  transport: {
+    type: "stdio",
+    command: "node",
+    args: ["/path/to/your-server.mjs"],
+  },
 });
 ```
 
@@ -143,7 +154,8 @@ await context.chat.registerToolRenderer({
   mcpId: "books",
   toolName: "search_books",
   component: ({ execution, data, dataVersion, renderDefault }) => {
-    if (execution.status !== "success" || dataVersion !== 1) return renderDefault();
+    if (execution.status !== "success" || dataVersion !== 1)
+      return renderDefault();
     return <BookList books={(data as { books: Book[] }).books} />;
   },
 });
