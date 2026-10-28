@@ -25,23 +25,24 @@
 
 ## 各平台可用的接口
 
-| 接口                                                   | 桌面 | Android / iOS | 说明                                                       |
-| ------------------------------------------------------ | ---- | ------------- | ---------------------------------------------------------- |
-| `pages`、`navigation`                                  | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
-| `settings`、`storage`、`fetch`、`websocket`            | ✓    | ✓             |                                                            |
-| `commands`                                             | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
-| `environment`、`register`、`signal`                    | ✓    | ✓             |                                                            |
-| 编辑器块（`editorExtensions`、`editorCodecs`）         | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
-| `sync`、`upload`、`tts`、`asr` 提供方                  | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
-| `images`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
-| `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
-| `data`、`content`、`events`、`app`、`permissions`      | ✓    |               | 用户数据，见[用户数据](user-data.md)                       |
-| `entities`、`records`、`links`、`transaction`          | ✓    |               | 插件自己的内容也只在桌面可用                               |
-| `ai`、`mcp`、`chat`、`flashcards`                      | ✓    |               |                                                            |
-| `excerpts`、`materials`、`services`                    | ✓    |               |                                                            |
-| 白板扩展（`whiteboardExtensions`）                     | ✓    |               |                                                            |
-| `backend`（本机后台）                                  | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
-| 随插件附带的 Skill                                     | ✓    |               | 手机上会保留，但不使用                                     |
+| 接口                                                           | 桌面 | Android / iOS | 说明                                                       |
+| -------------------------------------------------------------- | ---- | ------------- | ---------------------------------------------------------- |
+| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
+| `settings`、`storage`、`fetch`、`websocket`                    | ✓    | ✓             |                                                            |
+| `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
+| `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                            |
+| 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
+| `sync`、`upload`、`tts`、`asr` 提供方                          | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
+| `images`、`embeddings`、`video`、`publish` 提供方              | ✓    |               |                                                            |
+| `sidebar`、`home`、`actions`、`views`、`notifications`         | ✓    |               | 跨平台的入口用 `navigation`                                |
+| `data`、`content`、`events`、`app`、`permissions`              | ✓    |               | 用户数据，见[用户数据](user-data.md)                       |
+| `entities`、`records`、`links`、`transaction`                  | ✓    |               | 插件自己的内容也只在桌面可用                               |
+| `ai`、`mcp`、`chat`、`flashcards`                              | ✓    |               |                                                            |
+| `excerpts`、`materials`、`services`                            | ✓    |               |                                                            |
+| 白板扩展（`whiteboardExtensions`）                             | ✓    |               |                                                            |
+| 开发台编辑器扩展（`editor`）                                   | ✓    |               |                                                            |
+| `backend`（本机后台）                                          | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
+| 随插件附带的 Skill                                             | ✓    |               | 手机上会保留，但不使用                                     |
 
 - 声明了 `android` 或 `ios` 的插件，`permissions` 必须为空。手机还不支持用户数据授权，构建和插件中心都会拒绝这样的包。
 - 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
