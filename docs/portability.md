@@ -30,12 +30,14 @@
 | `pages`、`navigation`                                  | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
 | `settings`、`storage`、`fetch`、`websocket`            | ✓    | ✓             |                                                            |
 | `commands`                                             | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
-| `environment`、`register`、`signal`                    | ✓    | ✓             |                                                            |
+| `environment`、`register`、`signal`、`pluginId`、`workspaceId`                    | ✓    | ✓             |                                                            |
 | 编辑器块（`editorExtensions`、`editorCodecs`）         | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
 | `sync`、`upload`、`tts`、`asr` 提供方                  | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
 | `images`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
 | `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
-| `data`、`content`、`events`、`app`、`permissions`      | ✓    |               | 用户数据，见[用户数据](user-data.md)                       |
+| `permissions`、`data`、`content`、`events` | ✓ | 部分 | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放 |
+| `app` | ✓ | | 选择、打开及界面动作尚未接入移动宿主 |
+| `editor`（动态工作台贡献） | ✓ | | 正文跨端扩展使用静态 `editorExtensions` |
 | `entities`、`records`、`links`、`transaction`          | ✓    |               | 插件自己的内容也只在桌面可用                               |
 | `ai`、`mcp`、`chat`、`flashcards`                      | ✓    |               |                                                            |
 | `excerpts`、`materials`、`services`                    | ✓    |               |                                                            |
@@ -43,7 +45,10 @@
 | `backend`（本机后台）                                  | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
 | 随插件附带的 Skill                                     | ✓    |               | 手机上会保留，但不使用                                     |
 
-- 声明了 `android` 或 `ios` 的插件，`permissions` 必须为空。手机还不支持用户数据授权，构建和插件中心都会拒绝这样的包。
+- 移动业务数据要求对应 `targets` 的最低版本不低于 `0.2.13`。允许 `cards:read/write/delete`、`articles:read/write/delete`、`projects:read/write/delete`、`documents:read/write/delete`、`todos:read/write/delete`、`calendar:read/write/delete` 十八项权限；这里的斜杠表示三项独立权限。其他权限仍在构建、中心和运行前拒绝。安装不等于授权，第一次访问由用户决定。
+- 项目目录支持多处挂载、创建与移动文档；只能删除空项目和无子项的非视频文档，七天内可恢复到仍有效的原位置。引用项的正文仍归原卡片或文章。
+- 移动待办支持普通/截止任务与周期实例，正文勾选项仍保存在原文；系统日程标记只读。周期实例写入在移动 0.2.13 已接入，其他未接线宿主会明确拒绝，不会改动整系列。
+- 移动正文支持读取 Markdown/节点及追加、前插、替换；修改检查版本，协作正文经服务端条件提交。移动 `shareOf` 和插件自有实体尚未开放；协作附件仍受移动协作宿主的限制。
 - 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
 
 ## 页面与入口
