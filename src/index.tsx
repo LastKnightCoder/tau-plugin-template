@@ -12,7 +12,7 @@ import {
   type PluginPageProps,
   type PluginSettingsProps,
 } from "@tau/plugins";
-import { Button, Panel, Dialog, DialogBody } from "@tau/ui";
+import { Button, Dialog, DialogBody } from "@tau/ui";
 import "./styles.css";
 import { CounterIcon } from "./CounterIcon";
 
@@ -41,7 +41,7 @@ function Counter({ context }: PluginSettingsProps) {
   });
   const [help, setHelp] = useState(false);
   return (
-    <Panel className="example-counter">
+    <div className="example-counter">
       <p role="status">{query.isPending ? "正在读取…" : `已保存计数：${query.data}`}</p>
       <Button
         disabled={query.isPending || query.isError || save.isPending}
@@ -59,7 +59,7 @@ function Counter({ context }: PluginSettingsProps) {
       <Dialog open={help} onOpenChange={setHelp} title="使用说明">
         <DialogBody>设置保存在当前工作区，停用后保留。</DialogBody>
       </Dialog>
-    </Panel>
+    </div>
   );
 }
 

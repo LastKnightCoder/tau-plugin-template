@@ -199,7 +199,7 @@ const preferences = context.settings.register({
 | `component`   | React 组件，收到 `context`                                      |
 | `target`      | 服务提供方的配置表单才需要，见[服务提供方](providers/README.md) |
 
-设置区域显示在插件详情页的「设置」里，桌面和手机都可用。`register` 返回的句柄提供 `open()`，可以从命令或页面里跳转过去：
+设置区域显示在插件详情页的「设置」里，桌面和手机都可用。Tau 会把组件放进一张带标题的设置卡片，组件直接写内容即可，不要再套 `Panel` 或自己画卡片边框。`register` 返回的句柄提供 `open()`，可以从命令或页面里跳转过去：
 
 ```ts
 context.commands.register({
