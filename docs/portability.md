@@ -25,26 +25,33 @@
 
 ## 各平台可用的接口
 
-| 接口                                                           | 桌面 | Android / iOS | 说明                                                       |
-| -------------------------------------------------------------- | ---- | ------------- | ---------------------------------------------------------- |
-| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
-| `settings`、`storage`、`fetch`、`websocket`                    | ✓    | ✓             |                                                            |
-| `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
-| `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                            |
-| 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
-| `sync`、`upload`、`tts`、`asr` 提供方                          | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
-| `images`、`embeddings`、`video`、`publish` 提供方              | ✓    |               |                                                            |
-| `sidebar`、`home`、`actions`、`views`、`notifications`         | ✓    |               | 跨平台的入口用 `navigation`                                |
-| `data`、`content`、`events`、`app`、`permissions`              | ✓    |               | 用户数据，见[用户数据](user-data.md)                       |
-| `entities`、`records`、`links`、`transaction`                  | ✓    |               | 插件自己的内容也只在桌面可用                               |
-| `ai`、`mcp`、`chat`、`flashcards`                              | ✓    |               |                                                            |
-| `excerpts`、`materials`、`services`                            | ✓    |               |                                                            |
-| 白板扩展（`whiteboardExtensions`）                             | ✓    |               |                                                            |
-| 开发台编辑器扩展（`editor`）                                   | ✓    |               |                                                            |
-| `backend`（本机后台）                                          | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
-| 随插件附带的 Skill                                             | ✓    |               | 手机上会保留，但不使用                                     |
+| 接口                                                   | 桌面 | Android / iOS | 说明                                                       |
+| ------------------------------------------------------ | ---- | ------------- | ---------------------------------------------------------- |
+| `pages`、`navigation`                                  | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」          |
+| `settings`、`storage`、`fetch`、`websocket`            | ✓    | ✓             |                                                            |
+| `commands`                                             | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口 |
+| `environment`、`register`、`signal`、`pluginId`、`workspaceId`                    | ✓    | ✓             |                                                            |
+| 编辑器块（`editorExtensions`、`editorCodecs`）         | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
+| `sync`、`upload`、`tts`、`asr` 提供方                  | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
+| `images`、`embeddings`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
+| `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
+| `permissions`、`data`、`content`、`events` | ✓ | 部分 | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放 |
+| `app` | ✓ | 部分 | 移动 0.2.13 支持原生六类及插件实体的 pick/describe/open；插件实体可定位，run 与独立窗口未开放 |
+| `ContentEditor`、`ContentPreview`、`EntityRef` | ✓ | 部分 | 移动支持插件作用域内的 full/compact、权限与协作，引用类型以 app 支持范围为准 |
+| `editor`（动态工作台贡献） | ✓ | | 正文跨端扩展使用静态 `editorExtensions` |
+| `entities`、`records`、`links`、`transaction` | ✓ | 部分 | 移动 0.2.13 支持自有实体与正文、记录、有序关联、原子事务、检索及 @；关联目标限移动已开放类型 |
+| `ai`、`mcp`、`chat`、`flashcards`                      | ✓    |               |                                                            |
+| `excerpts`、`materials`、`services`                    | ✓    |               |                                                            |
+| 白板扩展（`whiteboardExtensions`）                     | ✓    |               |                                                            |
+| `backend`（本机后台）                                  | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                 |
+| 随插件附带的 Skill                                     | ✓    |               | 手机上会保留，但不使用                                     |
 
-- 声明了 `android` 或 `ios` 的插件，`permissions` 必须为空。手机还不支持用户数据授权，构建和插件中心都会拒绝这样的包。
+- 移动业务数据要求对应 `targets` 的最低版本不低于 `0.2.13`。允许 `cards:read/write/delete`、`articles:read/write/delete`、`projects:read/write/delete`、`documents:read/write/delete`、`todos:read/write/delete`、`calendar:read/write/delete` 十八项权限；这里的斜杠表示三项独立权限。其他权限仍在构建、中心和运行前拒绝。安装不等于授权，第一次访问由用户决定。
+- 项目目录支持多处挂载、创建与移动文档；只能删除空项目和无子项的非视频文档，七天内可恢复到仍有效的原位置。引用项的正文仍归原卡片或文章。
+- 移动待办支持普通/截止任务与周期实例，正文勾选项仍保存在原文；系统日程标记只读。周期实例写入在移动 0.2.13 已接入，其他未接线宿主会明确拒绝，不会改动整系列。
+- 移动正文支持读取 Markdown/节点及追加、前插、替换；修改检查版本，协作正文经服务端条件提交。移动 `shareOf` 可让新卡片、文章或项目文档共用本插件活跃实体的正文，不能用于实体创建或正文替换；协作附件仍受移动协作宿主的限制。
+- 移动 `app.pick/describe/open` 支持卡片、文章、项目、普通正文项目文档、待办、实体日程及插件实体；只能在 page 打开，虚拟日程改用其 todoId 打开待办。周期实例打开所属系列，正文待办定位原文勾选项。插件实体按拥有者注册的 open 页面打开，停用时保留展示但不能打开；选择只授权引用标题，不授予正文读取。公共正文组件需要插件页面/设置作用域，预览默认 3 块、最多 100 块；使用这些能力时最低移动版本至少 0.2.13。
+- 移动自有数据按工作区、插件与激活租约隔离，不额外申请业务权限。记录删除不进恢复列表，实体删除可在七天内恢复。关联支持已开放原生引用及插件实体（自有或已选择），事务最多 500 项。registerKind 的类型名与图标随库保存，open 接入搜索、引用及脉络入口；@ 只列当前活跃且 mentionable 的类型。全文检索展示现存实体，停用后不执行旧打开回调。移动卸载保留实体/记录，不根据本机缺少插件自动清理同步数据。
 - 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
 
 ## 页面与入口

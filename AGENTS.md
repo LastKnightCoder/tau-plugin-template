@@ -12,7 +12,7 @@
 
 - 使用 TypeScript/TSX。插件接口从 `@tau/plugins` 导入，界面组件从 `@tau/ui` 导入。
 - 插件身份只在 `manifest.json` 中修改，入口沿用 `__PLUGIN_META__`。不要为日常升级修改插件 ID，改了 ID 用户的数据就找不回来了。
-- `manifest.json` 的 `targets` 只列插件全部功能都能用的平台。用到的接口在手机上不可用时（见 `docs/portability.md` 的接口表），只保留 `desktop`；声明了手机平台时 `permissions` 必须为空。
+- `manifest.json` 的 `targets` 只列插件全部功能都能用的平台。用到的接口在手机上不可用时（见 `docs/portability.md` 的接口表），只保留 `desktop`；移动业务权限支持卡片、文章、项目、项目文档、待办和日程的 read/write/delete，并要求最低移动版本 0.2.13；其他权限暂不能声明移动目标。
 - 页面用 `context.pages.register` 注册，入口用 `context.navigation.registerEntry` 注册。布局按容器宽度适配，不按平台判断；操作不能只靠悬停或右键。
 - 运行状态放在 `create` 返回的闭包或组件里，不放在模块顶层。不要缓存 `context` 留到下次启用。
 - 通过 `context` 注册的东西会自动清理；自己创建的计时器、监听、连接交给 `context.register`。异步任务响应 `context.signal`，写回界面前检查 `context.signal.aborted`。
