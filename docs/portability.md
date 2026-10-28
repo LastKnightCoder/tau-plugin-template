@@ -36,9 +36,9 @@
 | `images`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
 | `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
 | `permissions`、`data`、`content`、`events` | ✓ | 部分 | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放 |
-| `app` | ✓ | | 选择、打开及界面动作尚未接入移动宿主 |
+| `app` | ✓ | 部分 | 移动 0.2.13 支持六类内容的 pick/describe/open；run、独立窗口及块序号定位未开放 |
 | `editor`（动态工作台贡献） | ✓ | | 正文跨端扩展使用静态 `editorExtensions` |
-| `entities`、`records`、`links`、`transaction`          | ✓    |               | 插件自己的内容也只在桌面可用                               |
+| `entities`、`records`、`links`、`transaction` | ✓ | 部分 | 移动 0.2.13 支持自有实体与正文、记录、有序关联、原子事务；实体的全局打开和 @ 入口未接入 |
 | `ai`、`mcp`、`chat`、`flashcards`                      | ✓    |               |                                                            |
 | `excerpts`、`materials`、`services`                    | ✓    |               |                                                            |
 | 白板扩展（`whiteboardExtensions`）                     | ✓    |               |                                                            |
@@ -48,7 +48,9 @@
 - 移动业务数据要求对应 `targets` 的最低版本不低于 `0.2.13`。允许 `cards:read/write/delete`、`articles:read/write/delete`、`projects:read/write/delete`、`documents:read/write/delete`、`todos:read/write/delete`、`calendar:read/write/delete` 十八项权限；这里的斜杠表示三项独立权限。其他权限仍在构建、中心和运行前拒绝。安装不等于授权，第一次访问由用户决定。
 - 项目目录支持多处挂载、创建与移动文档；只能删除空项目和无子项的非视频文档，七天内可恢复到仍有效的原位置。引用项的正文仍归原卡片或文章。
 - 移动待办支持普通/截止任务与周期实例，正文勾选项仍保存在原文；系统日程标记只读。周期实例写入在移动 0.2.13 已接入，其他未接线宿主会明确拒绝，不会改动整系列。
-- 移动正文支持读取 Markdown/节点及追加、前插、替换；修改检查版本，协作正文经服务端条件提交。移动 `shareOf` 和插件自有实体尚未开放；协作附件仍受移动协作宿主的限制。
+- 移动正文支持读取 Markdown/节点及追加、前插、替换；修改检查版本，协作正文经服务端条件提交。移动 `shareOf` 可让新卡片、文章或项目文档共用本插件活跃实体的正文，不能用于实体创建或正文替换；协作附件仍受移动协作宿主的限制。
+- 移动 `app.pick/describe/open` 支持卡片、文章、项目、普通正文项目文档、待办与实体日程；只能在 page 打开，虚拟日程改用其 todoId 打开待办。周期实例打开所属系列，正文待办定位原文勾选项。选中引用不授予正文读取权限；公共 EntityRef/ContentEditor/ContentPreview 组件尚未接入移动宿主，使用直接 app API 和自有界面。使用这些能力时最低移动版本至少 0.2.13。
+- 移动自有数据按工作区、插件与激活租约隔离，不额外申请业务权限。记录删除不进恢复列表，实体删除可在七天内恢复。关联支持已开放原生引用及插件实体（自有或已选择），事务最多 500 项。registerKind 保存类型名与图标，open/mentionable 对应的原生检索、打开和 @ 入口尚未接入；可在插件自己的页面中管理内容。移动卸载保留实体/记录，不根据本机缺少插件自动清理同步数据。
 - 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
 
 ## 页面与入口
