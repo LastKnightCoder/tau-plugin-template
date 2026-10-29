@@ -34,9 +34,10 @@
 | 编辑器块（`editorExtensions`、`editorCodecs`）         | ✓    | ✓             | 见[编辑器块](#编辑器块)                                    |
 | `sync`、`upload`、`tts`、`asr` 提供方                  | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                  |
 | `images`、`embeddings`、`video`、`publish` 提供方                    | ✓    |               |                                                            |
-| `sidebar`、`home`、`actions`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
+| `sidebar`、`home`、`views`、`notifications` | ✓    |               | 跨平台的入口用 `navigation`                                |
+| `actions` | ✓ | 部分 | 移动支持卡片、文章和项目文档详情页的「更多」菜单；引用文档使用来源卡片或文章 |
 | `permissions`、`data`、`content`、`events` | ✓ | 部分 | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放 |
-| `app` | ✓ | 部分 | 移动 0.2.13 支持原生六类及插件实体的 pick/describe/open；插件实体可定位，run 与独立窗口未开放 |
+| `app` | ✓ | 部分 | 移动 0.2.13 支持原生六类及插件实体的 pick/describe/open；卡片、文章、项目文档和插件实体可定位；run 支持新建卡片、插入项目文档、打开内容协作，独立窗口未开放 |
 | `ContentEditor`、`ContentPreview`、`EntityRef` | ✓ | 部分 | 移动支持插件作用域内的 full/compact、权限与协作，引用类型以 app 支持范围为准 |
 | `editor`（动态工作台贡献） | ✓ | | 正文跨端扩展使用静态 `editorExtensions` |
 | `entities`、`records`、`links`、`transaction` | ✓ | 部分 | 移动 0.2.13 支持自有实体与正文、记录、有序关联、原子事务、检索及 @；关联目标限移动已开放类型 |
