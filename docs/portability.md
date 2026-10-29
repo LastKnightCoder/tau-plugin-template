@@ -39,7 +39,6 @@
 | `permissions`、`data`、`content`、`events` | ✓ | 部分 | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放 |
 | `app` | ✓ | 部分 | 支持卡片、文章、项目、项目文档、日记片段、待办、日程及插件实体的 pick/describe/open；正文可定位；run 支持新建卡片、插入项目文档、打开内容协作，独立窗口未开放 |
 | `ContentEditor`、`ContentPreview`、`EntityRef` | ✓ | 部分 | 移动支持插件作用域内的 full/compact、权限与协作，引用类型以 app 支持范围为准 |
-| `editor`（动态工作台贡献） | ✓ | | 正文跨端扩展使用静态 `editorExtensions` |
 | `entities`、`records`、`links`、`transaction` | ✓ | 部分 | 移动 0.2.13 支持自有实体与正文、记录、有序关联、原子事务、检索及 @；关联目标限移动已开放类型 |
 | `flashcards` | ✓ | 部分 | 查询牌组、创建牌组和闪卡、手动 openCreate；AI 生成未开放 |
 | `ai`、`mcp`、`chat`                      | ✓    |               |                                                            |
