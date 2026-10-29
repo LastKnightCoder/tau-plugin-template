@@ -12,7 +12,7 @@
 
 - 使用 TypeScript/TSX。插件接口从 `@tau/plugins` 导入，界面组件从 `@tau/ui` 导入。
 - 插件身份只在 `manifest.json` 中修改，入口沿用 `__PLUGIN_META__`。不要为日常升级修改插件 ID，改了 ID 用户的数据就找不回来了。
-- `manifest.json` 的 `targets` 只列插件全部功能都能用的平台。用到的接口在手机上不可用时（见 `docs/portability.md` 的接口表），只保留 `desktop`；移动业务权限支持卡片、文章、项目、项目文档、待办和日程的 read/write/delete，以及闪卡的 read/write，并要求最低移动版本 0.2.13；其他权限暂不能声明移动目标。移动闪卡只支持基础接口和手动建卡，不支持 AI 生成。
+- `manifest.json` 的 `targets` 只列插件全部功能都能用的平台。用到的接口在手机上不可用时（见 `docs/portability.md` 的接口表），只保留 `desktop`；移动业务权限支持卡片、文章、项目、项目文档、待办和日程的 read/write/delete，以及闪卡的 read/write，AI 支持 SDK 声明的 `ai:<能力名>`，并要求最低移动版本 0.2.13；其他权限暂不能声明移动目标。移动闪卡只支持基础接口和手动建卡，不支持 AI 生成；AI/MCP/Skills 的宿主接线不包含聊天与配置界面，见多端接口表。
 - 页面用 `context.pages.register` 注册，入口用 `context.navigation.registerEntry` 注册。布局按容器宽度适配，不按平台判断；操作不能只靠悬停或右键。
 - 运行状态放在 `create` 返回的闭包或组件里，不放在模块顶层。不要缓存 `context` 留到下次启用。
 - 通过 `context` 注册的东西会自动清理；自己创建的计时器、监听、连接交给 `context.register`。异步任务响应 `context.signal`，写回界面前检查 `context.signal.aborted`。
@@ -24,6 +24,7 @@
 - 访问用户数据要声明权限并处理 `PluginPermissionError`；修改、删除传入 `revision` 并处理 `PluginConflictError`。
 - 服务提供方的账号配置用配置表单保存，不要存进 `context.storage`。
 - 给 AI 的使用说明写成 `skills/<id>/SKILL.md`（front matter 必须有 `description`），构建时自动打包，见 `docs/skills.md`。
+- 独立 Skill 包沿用 `formatVersion: 1`；跨端使用 `platform: "portable"` 与 `targets`，不声明代码入口。移动端可以安装与管理独立包，保留脚本文件但不运行脚本。格式号不表示平台或能力等级。
 - 不要把密钥、令牌或机器特定路径写进源码和插件包。
 
 ## 依赖与构建

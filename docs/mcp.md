@@ -1,8 +1,8 @@
 # MCP 工具
 
-通过 `context.mcp.register`，你可以给 Tau 的 AI 助手提供工具（仅桌面）。用户和 AI 对话时，AI 会按需调用这些工具，比如查询插件里的数据、在插件里执行操作。
+通过 `context.mcp.register`，你可以给 Tau 的 AI 助手提供工具。用户和 AI 对话时，AI 会按需调用这些工具，比如查询插件里的数据、在插件里执行操作。
 
-注册的工具会出现在 Tau 的 MCP 页面和聊天的快捷面板里，用户可以整组或逐个开关工具。插件不需要自己做管理界面。
+桌面端注册的工具会出现在 Tau 的 MCP 页面和聊天的快捷面板里，用户可以整组或逐个开关工具。移动宿主支持内联工具与 HTTP MCP 注册、状态和工具渲染器声明，但尚无聊天和 MCP 管理界面，不支持本机进程；接口接入不代表已有用户入口。
 
 一个 MCP 有两种提供方式：
 
@@ -88,9 +88,7 @@ context.mcp.register({
 {
   "backend": {
     "systemAccess": ["process"],
-    "tools": [
-      { "id": "mcp", "command": "node", "args": ["/path/to/your-server.mjs"] }
-    ]
+    "tools": [{ "id": "mcp", "command": "node", "args": ["/path/to/your-server.mjs"] }]
   }
 }
 ```
@@ -154,8 +152,7 @@ await context.chat.registerToolRenderer({
   mcpId: "books",
   toolName: "search_books",
   component: ({ execution, data, dataVersion, renderDefault }) => {
-    if (execution.status !== "success" || dataVersion !== 1)
-      return renderDefault();
+    if (execution.status !== "success" || dataVersion !== 1) return renderDefault();
     return <BookList books={(data as { books: Book[] }).books} />;
   },
 });

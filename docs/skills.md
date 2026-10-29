@@ -58,6 +58,8 @@ description: 用户要在文档里插入或修改图表块时加载，说明图�
 
 ### 附带文件与脚本
 
+脚本执行只在桌面开放。移动端允许安装和保留包内脚本文件，读取技能说明与 Markdown 参考资料，但不会运行 Node、Python 或 Shell。
+
 - **参考资料**：AI 加载 Skill 后，可以按需读取目录里的其他文件。在 SKILL.md 里写清楚什么情况下该读哪个文件，比把所有内容塞进 SKILL.md 更省上下文。
 - **脚本**：AI 可以执行目录里的脚本，工作目录就是这个 Skill 目录。按扩展名选择解释器：`.py` 用 python3，`.js`、`.mjs`、`.cjs` 用 Node.js，`.sh` 用 bash，`.ts` 用 tsx；其他文件需要有可执行权限。
 - 每次执行脚本前，Tau 都会请用户确认。单次执行最长 120 秒，输出最多保留 64 KiB。
@@ -82,7 +84,7 @@ my-plugin/
 - 插件启用后，Skill 出现在 Tau 的 Skill 页，标注「插件 · 插件名」；插件停用后自动消失。
 - 用户可以在 Skill 页调整它的调用方式（自动、仅手动、停用），或者复制一份到自己的 Skill 目录修改。
 - AI 引用它时使用 `插件ID:目录名`，例如 `yourname.chart:chart-authoring`。
-- 普通插件（manifest 里写了 `targets`）附带的 Skill 只能是 Markdown 文档，不能带脚本。需要脚本时，做成下文的独立 Skill 包。Skill 只在桌面的 AI 助手里使用。
+- 应用插件附带的 Skill 只能是 Markdown 文档，不能带脚本。需要保留脚本时，做成下文的独立 Skill 包。移动 AI 宿主可读取活跃插件的 Skill 正文与 Markdown 参考资料，停用后撤销；独立包使用自己的安装与启用资格，不依赖应用插件激活。
 - 你的插件提供了 [MCP 工具](mcp.md)时，可以在 SKILL.md 里说明什么时候调用哪个工具、参数怎么填。
 
 ## 独立的 Skill 包
@@ -98,13 +100,19 @@ my-plugin/
   "categories": ["skill"],
   "keywords": ["写作", "风格"],
   "version": "1.0.0",
-  "minAppVersion": "0.59.0",
   "apiVersion": 1,
-  "platform": "desktop"
+  "platform": "portable",
+  "targets": {
+    "desktop": { "minAppVersion": "0.60.4" },
+    "android": { "minAppVersion": "0.2.13" },
+    "ios": { "minAppVersion": "0.2.13" }
+  }
 }
 ```
 
-和代码插件相比，Skill 包**没有** `main`、`format`，也不能声明 `permissions`、`backend`、`editor`、`whiteboard`。构建脚本看到 manifest 里没有 `main`，就会跳过代码打包，只打包 `skills/` 目录。
+Skill 包使用 `formatVersion: 1` 的文档目录协议，**没有** `main`、`format`、`profile`，也不声明 `permissions`、`backend`、`editor`、`whiteboard`。构建器识别独立包后只打包 `skills/`，不编译或执行代码入口。
+
+`formatVersion` 表示清单与文件布局的解析方式；`version` 是这个 Skill 包自己的更新版本；`platform/targets` 决定支持哪些客户端。独立 Skill 的文件布局没有变化，因此支持移动端不需要把格式号改为 3。旧的 `platform: "desktop"` 加 `minAppVersion` 声明继续只用于桌面；要分发到手机，使用上面的跨端声明。最低客户端版本需填实际验证过、且包含此能力的版本。
 
 ```text
 writing-style/
@@ -115,8 +123,8 @@ writing-style/
       SKILL.md
 ```
 
-- `pnpm build` 构建后，运行 `pnpm install:local` 安装到本机的 Tau，再在插件页点「重新扫描」，Skill 就会出现在 Skill 页，标注「Skill 包 · 包名」。
-- Skill 包不参与插件启停，用户在 Skill 页逐个调整调用方式或停用。
+- `pnpm build` 生成同一份跨端 ZIP，通过插件中心按 `targets` 分发。`install:local` 只用于既有桌面专用包，不向正式客户端手写跨端安装目录。
+- 独立包不进入应用插件的代码激活链。桌面沿用 Skill 页的调用方式管理；移动端沿用已有包管理的启停、更新和卸载，来源随包资格回收，安全模式不自动启用。
 - 发布流程与代码插件完全相同，见[发布与更新](release.md)。分类建议填 `skill`。
 - README 照样是给用户看的：这套 Skill 能让 AI 做什么，用户怎么点名使用。
 

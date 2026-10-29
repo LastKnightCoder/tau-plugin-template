@@ -19,7 +19,8 @@ const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
 const portable = manifest.targets !== undefined;
 
 // manifest 不写 main 时构建独立 Skill 包：没有代码入口，只打包 skills/ 目录
-const skillPackage = !portable && manifest.main === undefined;
+const skillPackage =
+  manifest.formatVersion === 1 && manifest.main === undefined && manifest.template === undefined;
 if (skillPackage) {
   const { assertLocalId, comparePluginVersions } = await import("@tau/plugins/package");
   assertLocalId(manifest.id);
@@ -27,7 +28,9 @@ if (skillPackage) {
 }
 let backend;
 let validateManifest;
-if (manifest.targets) {
+if (skillPackage) {
+  validateManifest = (await import("@tau/plugins/template")).validateDistributionManifest;
+} else if (manifest.targets) {
   validateManifest = (await import("@tau/plugins/portable")).buildPortablePluginManifest;
 } else if (!skillPackage) {
   const api = await import("@tau/plugins/package");
@@ -194,7 +197,7 @@ try {
   if (skills.ids.length) packaged.skills = skills.ids;
 
   if (validateManifest) {
-    if (portable)
+    if (portable && !skillPackage)
       packaged = validateManifest(manifest, {
         main: "main.js",
         integrity,
@@ -221,7 +224,7 @@ try {
   const archive = path.resolve("dist", `${manifest.id}-${manifest.version}.zip`);
   zip.writeZip(archive);
   console.log(
-    `构建完成：${archive}\n${portable ? "格式 3 沿用插件中心上架规则，作者负责平台适配与测试；桌面与移动安装均需兼容的正式客户端。" : "运行 pnpm install:local 安装到 Tau，然后在插件页点「重新扫描」。"}`
+    `构建完成：${archive}\n${portable ? "跨端包沿用插件中心上架规则，作者负责平台适配与测试；桌面与移动安装均需兼容的正式客户端。" : "运行 pnpm install:local 安装到 Tau，然后在插件页点「重新扫描」。"}`
   );
 } catch (error) {
   await rm(staging, { recursive: true, force: true });

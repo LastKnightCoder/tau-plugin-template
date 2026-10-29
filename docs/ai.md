@@ -1,6 +1,8 @@
 # AI
 
-插件可以调用用户在 Tau 中配置好的大模型（仅桌面）。插件拿不到用户的 API Key 和服务地址：请求由 Tau 代为发出，用量记在插件名下，受用户设置的额度约束。
+插件可以调用用户在 Tau 中配置好的大模型。插件拿不到用户的 API Key 和服务地址：请求由 Tau 代为发出，用量记在插件名下，受用户设置的额度约束。移动端支持文本、图片和流式调用，具体边界见[多端适配](portability.md#各平台可用的接口)。
+
+移动端尚未提供自定义 AI 的配置界面及用量统计页面，由宿主管理接口配置和读取账本；未接入打开回调时，`openSettings()` 抛出 `AI_SETTINGS_UNAVAILABLE`。优先使用已有模型分配，不依赖手机上的配置入口完成首次设置。
 
 | 用法                                                | 适合                                                  | 用户需要做什么                   |
 | --------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
@@ -63,9 +65,7 @@ declare const __PLUGIN_META__: { id: string; name: string; version: string };
 export default definePlugin({
   ...__PLUGIN_META__,
   ai: {
-    features: [
-      { id: "summary", name: "文章摘要", description: "概括用户选择的文章" },
-    ],
+    features: [{ id: "summary", name: "文章摘要", description: "概括用户选择的文章" }],
   },
   create: () => ({
     activate(context) {
