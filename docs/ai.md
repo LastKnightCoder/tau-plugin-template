@@ -4,29 +4,29 @@
 
 移动端尚未提供自定义 AI 的配置界面及用量统计页面，由宿主管理接口配置和读取账本；未接入打开回调时，`openSettings()` 抛出 `AI_SETTINGS_UNAVAILABLE`。优先使用已有模型分配，不依赖手机上的配置入口完成首次设置。
 
-| 用法                                                | 适合                                                  | 用户需要做什么                   |
-| --------------------------------------------------- | ----------------------------------------------------- | -------------------------------- |
-| [使用 Tau 已有的模型分配](#使用-tau-已有的模型分配) | 功能和 Tau 某项内置 AI 功能相近，如生成标题、理解图片 | 首次使用时授权                   |
-| [自定义 AI 功能](#自定义-ai-功能)                   | 插件特有的功能，需要用户单独选择模型                  | 在插件设置里为功能选择模型并开启 |
+| 用法                                                | 适合                                 | 用户需要做什么                   |
+| --------------------------------------------------- | ------------------------------------ | -------------------------------- |
+| [使用 Tau 已有的模型分配](#使用-tau-已有的模型分配) | 使用聊天或闪卡生成的模型分配         | 首次使用时授权                   |
+| [自定义 AI 功能](#自定义-ai-功能)                   | 插件特有的功能，需要用户单独选择模型 | 在插件设置里为功能选择模型并开启 |
 
 大多数插件用第一种就够了，不需要用户额外配置。
 
 ## 使用 Tau 已有的模型分配
 
-Tau 的每项内置 AI 功能（对话、标题总结、闪卡制作等）都由用户分配了模型。插件可以申请沿用其中某一项的模型。
+插件只可以申请沿用 Tau 的聊天和闪卡生成模型分配，其他内置 AI 用途不对插件开放。
 
 ### 1. 在 manifest 中声明
 
 ```json
-{ "permissions": ["ai:titleSummary"] }
+{ "permissions": ["ai:chat"] }
 ```
 
 ### 2. 申请并调用
 
 ```ts
-const model = await context.ai.requestCapability("titleSummary");
+const model = await context.ai.requestCapability("chat");
 const result = await model.chat({
-  messages: [{ role: "user", content: "为这段文字拟一个简短的标题：……" }],
+  messages: [{ role: "user", content: "概括这段文字的主要内容：……" }],
 });
 console.log(result.text);
 ```
@@ -35,21 +35,10 @@ console.log(result.text);
 
 可以申请的能力（也可以从 `PLUGIN_AI_CAPABILITIES` 导入）：
 
-| 能力名                         | 沿用的模型分配 |
-| ------------------------------ | -------------- |
-| `chat`                         | 对话功能       |
-| `titleSummary`                 | 标题总结       |
-| `webClip`                      | 网页剪藏       |
-| `podcastGeneration`            | 播客生成       |
-| `flashcardGeneration`          | 闪卡制作       |
-| `aiJudgement`                  | 答案评判       |
-| `transcriptionOptimization`    | 转录断句优化   |
-| `speechInputRefinement`        | 语音输入整理   |
-| `videoSummary`                 | 视频总结       |
-| `videoEbookRewrite`            | 视频电子书重写 |
-| `vibeLearningImageDescription` | 图片理解       |
-| `contentMetadata`              | 笔记元信息     |
-| `contentInsights`              | AI 洞见        |
+| 能力名                | 沿用的模型分配 |
+| --------------------- | -------------- |
+| `chat`                | 对话功能       |
+| `flashcardGeneration` | 闪卡制作       |
 
 这里只是借用模型，不会执行 Tau 对应功能的业务流程，也不会自动读取用户数据。提示词和输入由你的插件提供。用户没有为这项能力分配模型时，调用会明确失败，不会自动换成其他模型。
 
