@@ -215,6 +215,46 @@ context.commands.register({
 
 设置值不会自动保存，组件需要自己用 [`context.storage`](storage-and-network.md) 读写。页面和设置同时显示同一份数据时，保存后要刷新另一处的状态，`storage` 本身不会通知变化。模板用 React Query 管理读取、保存和失败状态，可以照着写。
 
+### 保存与离开确认
+
+开关、单选这类改了就该生效的偏好，直接在 `onChange` 里保存。需要校验、几项要一起提交、或保存有副作用（比如删除分类会移动已有记录）时，先在草稿里编辑，用 `useSettingsDraft` 告诉 Tau 草稿的状态，不要自己画保存按钮：
+
+```tsx
+import { useSettingsDraft } from "@tau/plugins";
+
+function Profile({ context }: PluginSettingsProps) {
+  const [saved, setSaved] = useState(initial);
+  const [draft, setDraft] = useState(initial);
+  const errors = validate(draft);
+  useSettingsDraft({
+    dirty: draft.height !== saved.height,
+    errors: Object.keys(errors).length,
+    changes: [{ label: "身高", from: `${saved.height} cm`, to: `${draft.height} cm` }],
+    save: async () => {
+      await context.storage.set("profile", draft);
+      setSaved(draft);
+    },
+    reset: () => setDraft(saved),
+  });
+  // 只渲染字段
+}
+```
+
+有改动时，设置页底部会出现保存条，⌘S（Windows 上 Ctrl+S）也能保存。用户切换页面、标签、设置分组或关闭窗口前，Tau 会列出 `changes` 并询问「保存并离开 / 继续编辑 / 放弃修改」。
+
+| 字段         | 说明                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `dirty`      | 草稿与已保存的值不同                                                                     |
+| `errors`     | 可选。填写有误的项数，大于 0 时不能保存。把出错的输入框设为 `aria-invalid`，Tau 会滚过去 |
+| `changes`    | 可选。修改清单，`from`、`to` 省略时只显示名称（适合密钥）                                |
+| `save`       | 写入草稿。返回的文字显示在「已保存」位置；抛错时保存条显示错误信息，草稿保留             |
+| `reset`      | 回到已保存的值                                                                           |
+| `onInvalid`  | 可选。有错误时用户仍点了保存，可以在这里把所有错误标出来                                 |
+| `saveLabel`  | 可选。保存按钮文字，默认「保存」                                                         |
+| `savingText` | 可选。保存中的文字，默认「正在保存…」                                                    |
+
+`useSettingsDraft` 返回 `{ saving, save }`。同一个组件也在插件页面里用时，页面里没有保存条，它返回 `null`，这时自己显示保存按钮。离开确认只覆盖应用内的离开和关闭窗口，应用被系统结束时不会询问。
+
 ## 命令
 
 ```ts
