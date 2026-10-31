@@ -33,7 +33,8 @@
 | `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                                                                                           |
 | 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                                                                                   |
 | `sync`、`upload`、`tts`、`asr` 提供方                          | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                                                                                 |
-| `images`、`embeddings`、`video`、`publish` 提供方              | ✓    |               |                                                                                                                           |
+| `images` 提供方                                               | ✓    | ✓             | 手机 0.2.16 起，支持生成、参考图编辑与账号配置                                                                               |
+| `embeddings`、`video`、`publish` 提供方                        | ✓    |               |                                                                                                                           |
 | `home`                                                         | ✓    | ✓             | 手机 0.2.16 起，见[界面 · 首页面板](ui.md#首页面板)                                                                       |
 | `speech`                                                       |      | ✓             | 手机 0.2.16 起，见[界面 · 语音输入](ui.md#语音输入)                                                                       |
 | `sidebar`、`views`、`notifications`                            | ✓    |               | 跨平台的入口用 `navigation`                                                                                               |
