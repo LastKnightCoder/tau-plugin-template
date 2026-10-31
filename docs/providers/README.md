@@ -71,15 +71,16 @@ context.settings.register({
 });
 ```
 
-| `target`  | 组件收到的配置属性 | 保存方法               |
-| --------- | ------------------ | ---------------------- |
-| `sync`    | 只能用 `form`      | Tau 保存               |
-| `upload`  | 只能用 `form`      | Tau 保存               |
-| `tts`     | `ttsConfig`        | `save(value, models)`  |
-| `asr`     | `asrConfig`        | `save(value, modelId)` |
-| `images`  | `imageConfig`      | `save(value, modelId)` |
-| `video`   | `videoConfig`      | `save(value)`          |
-| `publish` | `publishConfig`    | `save(value)`          |
+| `target`     | 组件收到的配置属性 | 保存方法               |
+| ------------ | ------------------ | ---------------------- |
+| `sync`       | 只能用 `form`      | Tau 保存               |
+| `upload`     | 只能用 `form`      | Tau 保存               |
+| `embeddings` | 只能用 `form`      | Tau 保存               |
+| `tts`        | `ttsConfig`        | `save(value, models)`  |
+| `asr`        | `asrConfig`        | `save(value, modelId)` |
+| `images`     | `imageConfig`      | `save(value, modelId)` |
+| `video`      | `videoConfig`      | `save(value)`          |
+| `publish`    | `publishConfig`    | `save(value)`          |
 
 - 配置属性是可选的，使用前先检查是否存在。
 - `value` 是之前保存的 JSON 值，用户还没保存过时可能为空。读取后自己校验结构，缺失的字段用默认值。
@@ -109,7 +110,7 @@ context.settings.register({
 
 ### 6. 在 manifest 中选择分类
 
-在 `categories` 中写上对应的分类（`sync`、`upload`、`voice`、`ai`、`video`、`blog-publish`；语音合成和语音识别都用 `voice`），用户在插件中心按分类筛选时就能找到你的插件。分类只影响展示，注册提供方的是代码。
+在 `categories` 中写上对应的分类（`sync`、`upload`、`voice`、`ai`、`video`、`blog-publish`；语音合成和语音识别都用 `voice`，图片生成和嵌入模型都用 `ai`），用户在插件中心按分类筛选时就能找到你的插件。分类只影响展示，注册提供方的是代码。
 
 ### 7. 写好 README
 
