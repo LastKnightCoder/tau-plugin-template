@@ -148,7 +148,7 @@ function BookPage({ pageContext }: PluginPageProps) {
 
 ## 功能入口
 
-功能入口让用户找到你的页面。桌面上它出现在侧边栏，手机上出现在「我的 › 插件功能」；同一份代码，位置由 Tau 决定。
+功能入口让用户找到你的页面。桌面上它出现在侧边栏，手机上出现在「我的」顶部的功能宫格，和任务、文章等内置功能放在一起；同一份代码，位置由 Tau 决定。
 
 ```ts
 const page = context.pages.register({
@@ -172,7 +172,7 @@ context.navigation.registerEntry({
 | `params` | 可选。点击时传给页面的参数                          |
 | `icon`   | 可选。图标组件，见[图标](#图标)；省略时使用默认图标 |
 
-页面被撤销时，指向它的入口也会一起撤销。桌面上的功能入口放在侧边栏的「插件」分组；需要放进其他分组、显示角标或子项时，改用下一节的侧边栏接口（仅桌面）。
+页面被撤销时，指向它的入口也会一起撤销。桌面上的功能入口放在侧边栏的「插件」分组；需要放进其他分组、显示角标或子项时，改用下一节的侧边栏接口（仅桌面）。手机宫格里插件入口排在内置功能之后，按启用顺序排列，超过两行时收进「更多」；`icon` 在宫格里显示为图标，省略时显示插件名首字。
 
 ## 设置
 
@@ -428,7 +428,7 @@ context.home.registerPanel({
 | ----------- | ---------------------------------------------------------------------------- |
 | `id`        | 局部 ID                                                                      |
 | `title`     | 面板标题，由 Tau 显示在面板顶部                                              |
-| `component` | 面板正文，收到 `context`；返回 `null` 时整块不显示                           |
+| `component` | 面板正文，收到 `context` 与可选的 `registerDismiss`；返回 `null` 时整块不显示 |
 | `size`      | 可选。`wide`（默认）占整行；`compact` 宽度足够时与其他紧凑面板并排显示       |
 | `action`    | 可选。`{ title, run }`，Tau 画在标题行右侧（如「查看书架」），点击调用 `run` |
 
@@ -436,6 +436,10 @@ context.home.registerPanel({
 - 新面板排在首页末尾。用户点首页右上角的「调整首页」后可以拖动面板调整位置或隐藏，布局随笔记库保存；插件停用后面板消失，重新启用后回到原来的位置。
 - 正文渲染出错时，这块面板显示错误和「重试」，不影响首页其他内容。
 - 首页只在主窗口显示，打开首页时组件才会渲染；需要随时更新的数据在组件里订阅（如 `context.events`），卸载时取消。
+
+手机上面板显示在「今天」页的问答条下面、日程上面，打开 App 第一屏就能看到。`compact` 面板两个一行排成小卡（约 160 × 130），`wide` 占整行；标题和 `action` 同样由 Tau 画在卡片顶部。小卡里放一个大数字加一两个按钮最合适，不要放输入框，记录类操作用按钮跳到插件页面。手机上没有「调整首页」，面板按插件启用顺序排列。
+
+需要按平台显示不同的正文时，在组件里读 `usePluginEnvironment()`，见[多端适配](portability.md#读取运行环境)。面板里自己画的底部面板这类浮层，用 props 里的 `registerDismiss(close)` 登记，系统返回会先关浮层；它与页面的 `pageContext.registerDismiss` 用法相同，宿主不支持时为 `undefined`。
 
 ## 对象动作
 
@@ -518,6 +522,33 @@ context.views.registerEntityPanel({
 - `target` 只是引用：读标题、正文仍按权限，挂在详情里不会自动获得读取权限。引用了卡片或文章的项目文档，收到的是被引用的卡片或文章。
 - 用户在详情页之间切换时，组件不会重新挂载，只换 `target`；按 `target` 取数据的 effect 要把它放进依赖。
 - 渲染出错时这一块显示错误和「重试」，不影响详情页其他内容。只在主窗口出现，独立编辑窗口不显示。
+
+## 语音输入
+
+插件可以让用户按住说话，拿到识别后的文字。识别方式沿用用户在 Tau「语音 › 语音输入」里的设置（系统识别或识别插件），插件不接触音频。在 manifest 的 `permissions` 里声明 `speech:input`，第一次调用 `start` 时 Tau 询问用户。
+
+```tsx
+const reason = context.speech.unavailableReason();
+if (reason) return toast.info(reason);
+const session = await context.speech.start({
+  signal,
+  onPreview: text => setPreview(text),
+});
+// 用户松手时
+await session.stop();
+const text = await session.result;
+```
+
+| 接口                        | 说明                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `unavailableReason()`       | 当前不能录音的原因（如识别插件账号尚未配置），可以录音时为 `null`；不会询问授权          |
+| `start({ signal, onPreview })` | 开始录音。`onPreview` 收到识别中的整段文字；同一时间只能有一次录音                     |
+| `session.stop()`            | 停止录音，`result` 随后给出最终文字                                                      |
+| `session.cancel()`          | 放弃这次录音，`result` 以 `AbortError` 失败                                              |
+
+- 录音只在 `start` 与 `stop` / `cancel` 之间进行，最长 120 秒，到时自动停止。插件停用时录音随之中止。
+- 「按住说话、上滑取消」这类手势由插件自己实现；`unavailableReason` 可以在按下前判断，给出提示。
+- 目前只有手机支持（0.2.16 起）。桌面上 `start` 抛出以 `SPEECH_UNAVAILABLE` 开头的错误，`unavailableReason` 返回不可用原因。
 
 ## 通知
 

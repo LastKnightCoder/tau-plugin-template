@@ -27,14 +27,16 @@
 
 | 接口                                                           | 桌面 | Android / iOS | 说明                                                                                                                                                          |
 | -------------------------------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的 › 插件功能」                                                                                                             |
+| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的」顶部功能宫格                                                                                                             |
 | `settings`、`storage`、`fetch`、`websocket`                    | ✓    | ✓             |                                                                                                                                                               |
 | `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口                                                                                                    |
 | `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                                                                                                                               |
 | 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                                                                                                                       |
 | `sync`、`upload`、`tts`、`asr` 提供方                          | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                                                                                                                     |
 | `images`、`embeddings`、`video`、`publish` 提供方              | ✓    |               |                                                                                                                                                               |
-| `sidebar`、`home`、`views`、`notifications`                    | ✓    |               | 跨平台的入口用 `navigation`                                                                                                                                   |
+| `home`                                                         | ✓    | ✓             | 手机 0.2.16 起显示在「今天」页问答条下；`compact` 为两列小卡，`wide` 占整行                                                                                     |
+| `speech`                                                       |      | ✓             | 手机 0.2.16 起支持，需要 `speech:input` 权限；识别方式沿用应用的语音输入设置。桌面暂不支持，`start` 抛 `SPEECH_UNAVAILABLE`                                  |
+| `sidebar`、`views`、`notifications`                            | ✓    |               | 跨平台的入口用 `navigation`                                                                                                                                   |
 | `actions`                                                      | ✓    | 部分          | 移动支持卡片、文章和项目文档详情页的「更多」菜单；引用文档使用来源卡片或文章                                                                                  |
 | `permissions`、`data`、`content`、`events`                     | ✓    | 部分          | 移动 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程及正文与变化事件，其他业务域尚未开放                                                                  |
 | `app`                                                          | ✓    | 部分          | 支持卡片、文章、项目、项目文档、日记片段、待办、日程及插件实体的 pick/describe/open；正文可定位；run 支持新建卡片、插入项目文档、打开内容协作，独立窗口未开放 |
@@ -49,7 +51,7 @@
 | 随插件附带的 Skill                                             | ✓    | 部分          | 活跃插件的 Markdown 正文与参考资料；移动端不执行脚本                                                                                                          |
 | 独立 Skill 包                                                  | ✓    | ✓             | 无代码入口，按 targets 安装；移动端保留脚本文件但不执行，说明与 Markdown 资料按需读取                                                                         |
 
-- 移动业务数据与 AI 能力要求对应 `targets` 的最低版本不低于 `0.2.13`。业务数据允许 `cards:read/write/delete`、`articles:read/write/delete`、`projects:read/write/delete`、`documents:read/write/delete`、`todos:read/write/delete`、`calendar:read/write/delete` 和 `flashcards:read/write` 共二十项权限；AI 允许 [AI 文档](ai.md)列出的 `ai:<能力名>`。斜杠表示各自独立的权限。其他权限仍在构建、中心和运行前拒绝。安装不等于授权，第一次访问由用户决定。
+- 移动业务数据与 AI 能力要求对应 `targets` 的最低版本不低于 `0.2.13`；`speech:input` 要求不低于 `0.2.16`。业务数据允许 `cards:read/write/delete`、`articles:read/write/delete`、`projects:read/write/delete`、`documents:read/write/delete`、`todos:read/write/delete`、`calendar:read/write/delete` 和 `flashcards:read/write` 共二十项权限；AI 允许 [AI 文档](ai.md)列出的 `ai:<能力名>`。斜杠表示各自独立的权限。其他权限仍在构建、中心和运行前拒绝。安装不等于授权，第一次访问由用户决定。
 - AI、MCP 与包内 Skill 的移动宿主接口需要包含此接线的客户端构建；接口接入不代表已发布，也不替代真机适配。移动端尚无聊天、MCP 管理或自定义 AI 配置界面，不要让插件依赖这些入口完成首次配置。
 - 项目目录支持多处挂载、创建与移动文档；只能删除空项目和无子项的非视频文档，七天内可恢复到仍有效的原位置。引用项的正文仍归原卡片或文章。
 - 移动待办支持普通/截止任务与周期实例，正文勾选项仍保存在原文；系统日程标记只读。周期实例写入在移动 0.2.13 已接入，其他未接线宿主会明确拒绝，不会改动整系列。
@@ -60,7 +62,7 @@
 
 ## 页面与入口
 
-页面和入口分开注册。同一份代码在桌面上出现在侧边栏，在手机上出现在「我的 › 插件功能」：
+页面和入口分开注册。同一份代码在桌面上出现在侧边栏，在手机上出现在「我的」顶部的功能宫格：
 
 ```tsx
 const page = context.pages.register({
