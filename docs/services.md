@@ -2,15 +2,16 @@
 
 把 Tailwind 编译、Markdown 转换、音视频处理交给 Tau 执行，插件不需要自己打包这些工具。`context.services` 目前只在桌面可用：
 
-| 服务                     | 用途                                                               |
-| ------------------------ | ------------------------------------------------------------------ |
-| `tailwind.compile`       | 从源码中提取 Tailwind 类名，生成 CSS                               |
-| `markdown.deserialize`   | Markdown → 编辑器节点                                              |
-| `markdown.serialize`     | 编辑器节点 → Markdown                                              |
-| `markdown.render`        | Markdown → HTML                                                    |
-| `ffmpeg.run`             | 用 FFmpeg 处理音视频                                               |
-| `videoExtractor.probe`   | 查询视频网页的标题与可下载格式，见[视频提供方](providers/video.md) |
-| `git.publishSnapshot` 等 | 博客发布用的 Git 服务，见[发布提供方](providers/publish.md)        |
+| 服务                         | 用途                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| `tailwind.compile`           | 从源码中提取 Tailwind 类名，生成 CSS                                                     |
+| `markdown.deserialize`       | Markdown → 编辑器节点                                                                    |
+| `markdown.serialize`         | 编辑器节点 → Markdown                                                                    |
+| `markdown.render`            | Markdown → HTML                                                                          |
+| `ffmpeg.run`                 | 用 FFmpeg 处理音视频                                                                     |
+| `videoExtractor.probe`       | 查询视频网页的标题与可下载格式，见[视频提供方](providers/video.md)                       |
+| `videoExtractor.getCaptions` | 读取一条平台字幕或返回 null，支持代理和取消，见[视频提供方](providers/video.md#平台字幕) |
+| `git.publishSnapshot` 等     | 博客发布用的 Git 服务，见[发布提供方](providers/publish.md)                              |
 
 这些服务只处理你传入的数据并返回结果：不读写用户的笔记，不弹出文件选择，也不会自动把样式注入页面。
 
@@ -23,7 +24,7 @@ const controller = new AbortController();
 try {
   const { css } = await context.services.tailwind.compile(
     { source: '<div class="p-4">Hello</div>', language: "html" },
-    { signal: controller.signal },
+    { signal: controller.signal }
   );
 } catch (error) {
   if (error instanceof Error && error.name === "AbortError") return;
@@ -39,8 +40,7 @@ try {
 
 ```ts
 const { css } = await context.services.tailwind.compile({
-  source:
-    '<section class="p-4 rounded-tau-md bg-surface text-ink-1">Hello</section>',
+  source: '<section class="p-4 rounded-tau-md bg-surface text-ink-1">Hello</section>',
   language: "html",
 });
 ```
@@ -58,8 +58,7 @@ const { css } = await context.services.tailwind.compile({
 ```ts
 import type { Descendant } from "@tau/plugins";
 
-const parsed =
-  await context.services.markdown.deserialize("# 标题\n\n- [x] 已完成");
+const parsed = await context.services.markdown.deserialize("# 标题\n\n- [x] 已完成");
 const nodes: Descendant[] = parsed.nodes;
 
 const { markdown } = await context.services.markdown.serialize(nodes);
@@ -115,7 +114,7 @@ const result = await context.services.ffmpeg.run(
   },
   {
     onProgress: ({ time }) => console.log("已处理", time, "秒"),
-  },
+  }
 );
 const output = result.files[0].data;
 ```
@@ -151,16 +150,12 @@ function Preview({ source }: { source: string }) {
     const controller = new AbortController();
     services.markdown
       .render(source, { signal: controller.signal })
-      .then((result) => setHtml(result.html))
+      .then(result => setHtml(result.html))
       .catch(() => undefined);
     return () => controller.abort();
   }, [services, source]);
 
-  return html ? (
-    <div dangerouslySetInnerHTML={{ __html: html }} />
-  ) : (
-    <pre>{source}</pre>
-  );
+  return html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : <pre>{source}</pre>;
 }
 ```
 

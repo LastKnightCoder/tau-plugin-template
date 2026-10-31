@@ -12,6 +12,7 @@
 2. Tau 调用 `matches(url)` 确认链接属于你的插件，再调用 `resolve(url)` 获取标题和可选清晰度。
 3. 用户选择清晰度，Tau 把这个清晰度的 `ref` 保存到文档中。
 4. 需要下载时，Tau 调用 `getPlayback(ref)` 获取当前可用的流地址，下载并缓存。之后离线也能播放。
+5. 打开尚无转录的视频笔记时，Tau 优先调用可选的 `getCaptions(ref, signal)`；有结果就保存并展示，没有结果或用户不满意时可手动转录音频。
 
 ## 注册
 
@@ -22,19 +23,19 @@ context.video.register({
   id: context.pluginId,
   name: "我的视频站",
   create: (config): VideoInstance => ({
-    matches: (url) => /^https:\/\/video\.example\.com\/v\//.test(url),
+    matches: url => /^https:\/\/video\.example\.com\/v\//.test(url),
     async resolve(url, signal) {
       const info = await fetchVideoInfo(context, url, signal);
       return {
         title: info.title,
         cover: info.cover,
-        variants: info.qualities.map((quality) => ({
+        variants: info.qualities.map(quality => ({
           label: quality.label,
           ref: { videoId: info.id, quality: quality.id },
         })),
       };
     },
-    cacheKey: (ref) => `${ref.videoId}:${ref.quality}`,
+    cacheKey: ref => `${ref.videoId}:${ref.quality}`,
     async getPlayback(ref, signal) {
       const stream = await fetchStreamUrl(context, ref, signal);
       return {
@@ -55,8 +56,23 @@ context.video.register({
 | `resolve(url, signal)`     | 返回 `{ title, cover?, variants, defaultVariant? }`。`variants` 是可选清晰度，至少一项，每项 `{ label, hint?, ref }`；`defaultVariant` 是默认项的下标，从 0 开始 |
 | `cacheKey(ref)`            | 返回稳定的缓存标识，应包含清晰度。已缓存的视频不会再调用 `getPlayback`                                                                                           |
 | `getPlayback(ref, signal)` | 每次下载前调用，返回当前可用的播放源，可以是会过期的地址                                                                                                         |
+| `getCaptions(ref, signal)` | 可选，返回 `{ language?, segments: [{ text, start, end }] }` 或 `null`，start/end 是相对于视频起点的毫秒时间戳                                                   |
 
 链接属于其他已启用插件时，Tau 会提示用户改用对应的入口。
+
+## 平台字幕
+
+字幕接口在 SDK 0.52.0 中新增。直接读取来源提供的 CC 或自动字幕，保留原字幕的时间戳；没有可用字幕时返回 `null`，也可以省略该方法。网络或认证失败可以抛出错误，宿主保留手动转录入口。实现须响应 `signal`；停用插件、取消或切库后不提交迟到结果。
+
+```ts
+async getCaptions(ref, signal) {
+  const captions = await fetchCaptions(context, ref, signal);
+  if (!captions?.length) return null;
+  return { language: "zh-CN", segments: captions };
+}
+```
+
+宿主只自动填充尚无字幕或转录的笔记，已保存内容不会因重新打开而被替换。字幕不要求本地转录模型；用户的「重新转录」始终使用音频识别。
 
 ## ref：可以长期保存的视频引用
 
@@ -91,6 +107,8 @@ const probe = await context.services.videoExtractor.probe(url, { signal });
 
 根据 `formats` 组织清晰度，`getPlayback` 时返回 `{ kind: "extract", url, videoFormat, audioFormat }`。插件不能自己启动外部程序下载视频。
 
+同一解析器可读取字幕：`context.services.videoExtractor.getCaptions(url, { proxy, signal })` 返回 `VideoCaptions | null`。它只下载一条 JSON3 字幕轨，优先人工字幕、同类优先原语言，无轨道时返回 null，不下载视频或调用转录模型。代理与本次调用一致；只有接入该服务的桌面客户端支持，较早客户端不会调用新字幕接口。
+
 ## 配置表单
 
 账号、Cookie、代理等通过配置表单让用户填写：
@@ -104,9 +122,7 @@ context.settings.register({
     groups: [
       {
         title: "连接",
-        fields: [
-          { key: "proxy", label: "代理地址", type: "url", optional: true },
-        ],
+        fields: [{ key: "proxy", label: "代理地址", type: "url", optional: true }],
       },
     ],
   },
