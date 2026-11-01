@@ -39,6 +39,7 @@
 | `speech`                                                       |      | ✓             | 手机 0.2.16 起，见[界面 · 语音输入](ui.md#语音输入)                                                                       |
 | `tts.open`、`upload.save`                                      | ✓    |               | 见[界面 · 朗读](ui.md#朗读)与[用户数据 · 保存资源文件](user-data.md#保存资源文件)                                           |
 | `sidebar`、`views`、`notifications`                            | ✓    |               | 跨平台的入口用 `navigation`                                                                                               |
+| `notebooks`                                                    | ✓    |               | 见[界面 · Notebook 输出](ui.md#notebook-输出)                                                                             |
 | `actions`                                                      | ✓    | 部分          | 手机只有卡片、文章、项目文档详情页的「更多」菜单，见[界面 · 对象动作](ui.md#对象动作)                                       |
 | `permissions`、`data`、`content`、`events`                     | ✓    | 部分          | 手机 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程，见[用户数据](user-data.md)                                      |
 | `app`                                                          | ✓    | 部分          | 手机可以选择、描述和打开上述内容与插件内容；`run` 只有新建卡片、插入项目文档和协作共享，见[用户数据](user-data.md#选择并打开已有内容) |

@@ -141,6 +141,7 @@ create: () => ({
 | `home`                                                       | 注册首页面板                                 | [界面](ui.md#首页面板)                         |
 | `actions`                                                    | 在卡片、文章、项目文档的菜单里加动作         | [界面](ui.md#对象动作)                         |
 | `views`                                                      | 在卡片、文章、项目文档详情里放区块           | [界面](ui.md#详情区块)                         |
+| `notebooks`                                                  | 在 Notebook 的生成菜单里加产物               | [界面](ui.md#notebook-输出)                    |
 | `settings`                                                   | 注册设置区域                                 | [界面](ui.md#设置)                             |
 | `notifications`                                              | 发送通知                                     | [界面](ui.md#通知)                             |
 | `speech`                                                     | 语音输入，拿到识别文字                       | [界面](ui.md#语音输入)                         |

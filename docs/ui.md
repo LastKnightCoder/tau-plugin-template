@@ -572,6 +572,57 @@ context.views.registerEntityPanel({
 - 用户在详情页之间切换时，组件不会重新挂载，只换 `target`；按 `target` 取数据的 effect 要把它放进依赖。
 - 渲染出错时这一块显示错误和「重试」，不影响详情页其他内容。只在主窗口出现，独立编辑窗口不显示。
 
+## Notebook 输出
+
+在 Notebook 的「生成」菜单（产物组的 ＋ 与资料页的「基于这份资料」）里加一种产物，例如播客。对话框、资料勾选、AI 生成和执行过程页都由 Tau 负责：AI 走 Notebook 已有的生成流程，会按需检索、补读用户勾选的资料。插件只说明要什么，拿到生成的正文后自己处理。目前只有桌面支持。
+
+```tsx
+context.notebooks.registerOutput({
+  id: "podcast",
+  title: "播客",
+  icon: Podcast,
+  kind: "episode", // 产物对应的插件实体类型，须先 registerKind
+  options: PodcastOptions, // 放在对话框中间的选项区
+  view: EpisodeView, // 产物在 Notebook 阅读区里的显示
+  async prepare({ notebook, resources, userPrompt, options, signal }) {
+    const entity = await context.entities.create({ kind: "episode", key: crypto.randomUUID(), meta: {} });
+    return {
+      entity: entity.id,
+      title: "播客脚本",
+      instructions: "写一段约 5 分钟的双人对话……最终每行输出「说话人: 内容」",
+      reminders: ["不要输出标题或说明"],
+    };
+  },
+  async complete({ entity, text, task, signal }) {
+    task.phase("合成语音");
+    // …解析 text、合成、保存，task.progress(done, total) 更新进度
+  },
+  async fail({ entity, reason }) {
+    // 生成失败或用户停止：清理占位或标为失败
+  },
+});
+```
+
+| 字段          | 说明                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `id`          | 局部 ID                                                                                  |
+| `title`       | 菜单、对话框与执行过程页里的名称                                                         |
+| `icon`        | 可选。图标组件（同[侧边栏图标](#图标)）                                                   |
+| `description` | 可选。对话框标题下的一句话                                                               |
+| `kind`        | 产物对应的插件实体类型                                                                   |
+| `options`     | 可选。选项区组件，收到 `{ context, target, value, onChange, setBlocker }`                 |
+| `view`        | 阅读区组件，收到 `{ context, entity, notebook }`                                         |
+| `prepare`     | 用户点「开始生成」时调用：建好产物占位，返回 `{ entity, title, instructions, reminders? }` |
+| `complete`    | 生成完成后调用：收到最终正文 `text` 与 `task`（`phase(text)`、`progress(done, total)`）    |
+| `fail`        | 可选。生成失败、`complete` 抛错或用户停止时调用，`reason` 为 `failed` 或 `cancelled`       |
+
+- `instructions` 只写这一种产物的要求与输出格式。资料清单、检索工具的用法和「先读资料再写」等通用规则由 Tau 补上，不要重复。
+- 选项区的 `value` 由插件定义（JSON），Tau 原样保存并在 `prepare` 时交回；`setBlocker(原因)` 让「开始生成」不可用，并在对话框底部显示原因。
+- 插件读不到资料内容，只拿到资料名称和生成的正文。用户在对话框里勾选资料并点「开始」即视为同意，不需要另外申请权限。
+- `prepare` 返回后，Tau 建一条从产物指向这个 Notebook 的关联（角色 `output`），并把 Notebook 登记为插件选择过的引用；产物据此出现在 Notebook 的产物列表里，点开时显示 `view`。插件停用后，它的产物不在列表里显示。
+- 生成用 Notebook 的模型分配，用量单独记在「Notebook · 插件名」名下，不占插件 AI 额度。
+- 失败或停止时，Tau 等待 `fail` 完成后才允许重试。「重新生成」在产物实体仍存在时沿用任务说明并重跑生成与 `complete`；若插件已删除占位，则重新调用 `prepare`、建立 Notebook 关联并打开新产物。
+
 ## 语音输入
 
 插件可以让用户按住说话，拿到识别后的文字。目前只有手机支持（0.2.16 起）。识别方式沿用用户在 Tau「语音 › 语音输入」里的设置（系统识别或识别插件），插件不接触音频。在 manifest 的 `permissions` 里声明 `speech:input`，第一次调用 `start` 时 Tau 询问用户。
