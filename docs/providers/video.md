@@ -107,7 +107,7 @@ const probe = await context.services.videoExtractor.probe(url, { signal });
 
 根据 `formats` 组织清晰度，`getPlayback` 时返回 `{ kind: "extract", url, videoFormat, audioFormat }`。插件不能自己启动外部程序下载视频。
 
-同一解析器可读取字幕：`context.services.videoExtractor.getCaptions(url, { proxy, signal })` 返回 `VideoCaptions | null`。它只下载一条 JSON3 字幕轨，优先人工字幕、同类优先原语言，无轨道时返回 null，不下载视频或调用转录模型。代理与本次调用一致；只有接入该服务的桌面客户端支持，较早客户端不会调用新字幕接口。
+同一解析器可读取字幕：`context.services.videoExtractor.getCaptions(url, { proxy, signal })` 返回 `VideoCaptions | null`。它支持 JSON3、WebVTT（VTT）和 SubRip（SRT），只下载一条字幕轨：优先人工字幕、同类优先原语言，同一语言按 JSON3 → VTT → SRT 选择格式。结果统一为纯文本与毫秒起止时间；没有受支持的字幕轨或有效片段时返回 null，不下载视频或调用转录模型。代理与本次调用一致；只有接入该服务的桌面客户端支持，较早客户端不会调用新字幕接口。
 
 ## 配置表单
 
