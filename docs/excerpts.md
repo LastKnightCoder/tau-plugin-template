@@ -1,8 +1,19 @@
 # 摘录
 
-如果你的插件从外部服务读取划线、批注或收藏（读书笔记、网页高亮、文献批注等），可以把它们写成 Tau 的**摘录**（仅桌面）。写入后，用户能在全局搜索和 AI 对话中找到它们，在文档中引用，也能把它们转为卡片或问题。
+插件从外部服务读到的划线、批注和收藏（读书笔记、网页高亮、文献批注等），可以写进 Tau 成为**摘录**。写入后，用户能在全局搜索和 AI 对话中找到它们，在文档里引用，也能把它们转为卡片或问题。摘录属于用户：插件停用或卸载后，已经写入的摘录和引用都会保留。写摘录不需要声明权限。
 
-摘录属于用户：插件停用或卸载后，已经写入的摘录和引用都会保留。
+下面把一本书的两条划线写进 Tau。在 `activate` 中注册一次提供方，之后就可以写入：
+
+```ts
+context.excerpts.register({ label: "我的读书笔记" });
+
+await context.excerpts.replace({ key: "book-42", title: "设计心理学" }, [
+  { externalId: "n1", quote: "好的设计是让人一眼就知道怎么用。", location: "第 1 章" },
+  { externalId: "n2", quote: "示能决定了可能的操作。", note: "和交互设计课的观点一致" },
+]);
+```
+
+手机上插件同样可以写入、读回摘录并转为卡片，但用户不能在手机上引用摘录，见[多端适配](portability.md#各平台可用的接口)。
 
 ## 注册提供方
 
@@ -108,11 +119,11 @@ const entries = await context.excerpts.items("book-42");
 
 ## 材料动作
 
-摘录等内容在 Tau 中统称**材料**。`context.materials.actions(ref)` 返回 Tau 当前能对这条材料执行的操作，例如「转为卡片」，适合放在插件自己的列表或详情页里。这里只有 Tau 自己的操作，不包括其他插件注册的对象动作：
+摘录、PDF 标注和剪藏在 Tau 中统称**材料**。`context.materials.actions(ref)` 返回 Tau 能对本插件写入的一条摘录执行的操作，例如「转为卡片」，适合放在插件自己的列表或详情页里，让用户不离开插件就能把一条划线存成卡片。这里只有 Tau 自己的操作，不包括其他插件注册的[对象动作](app-surfaces.md#对象动作)：
 
 ```tsx
 import { useEffect, useState } from "react";
-import { Button } from "@tau/ui";
+import { Button, toast } from "@tau/ui";
 import type {
   PluginContext,
   PluginMaterialAction,
@@ -130,6 +141,8 @@ function NoteActions({
   useEffect(() => {
     void context.materials.actions(target).then((list) => {
       if (!context.signal.aborted) setActions(list);
+    }).catch((error) => {
+      if (!context.signal.aborted) toast.error(error instanceof Error ? error.message : String(error));
     });
   }, [context, target]);
   return actions.map((action) => (
@@ -140,6 +153,9 @@ function NoteActions({
 }
 ```
 
-- `ref` 来自 `excerpts.items()` 返回的条目，原样传回即可，不要自己构造或解析。
-- 直接用 `label` 作为按钮文字，不要按 `id` 写死列表，Tau 以后可能增加新的动作。
+- `ref` 来自 `excerpts.items()` 返回的条目。要存起来以后再用时，保存整个对象，不要只存 `kind`、`id` 或自己拼一个：缺了其中的身份信息，Tau 会拒绝操作。
+- 直接用 `label` 作为按钮文字，不要按 `id` 写死列表，不同设备上能执行的动作可能不同。
 - 动作执行后由 Tau 给出成功或失败的提示，插件不需要再提示。
+- 获取动作也可能失败，例如这条摘录在其他设备上被重新写入、之前存的 `ref` 已经失效。像上例那样捕获错误，重新调用 `items()` 拿到新的 `ref`，再获取动作。之前拿到的动作同样会拒绝执行，需要重新获取。
+
+转成的卡片怎样继续读写，见[读写用户数据](user-data.md)。

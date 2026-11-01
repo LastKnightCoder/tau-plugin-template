@@ -2,9 +2,9 @@
 
 通过 `context.mcp.register`，你可以给 Tau 的 AI 助手提供工具。用户和 AI 对话时，AI 会按需调用这些工具，比如查询插件里的数据、在插件里执行操作。
 
-桌面上，注册的工具会出现在 Tau 的 MCP 页面和聊天的快捷面板里，用户可以整组或逐个开关工具，插件不需要自己做管理界面。手机上可以注册本地工具和 HTTP 服务器，但工具目前不会出现在手机的 AI 对话里，也没有 MCP 管理页；本机进程只有桌面支持。
+注册的工具会出现在 Tau 的 MCP 页面和聊天的快捷面板里，用户可以整组或逐个开关工具，插件不需要自己做管理界面。手机上的 AI 对话用不到插件的工具，见[多端适配](portability.md#各平台可用的接口)。
 
-一个 MCP 有两种提供方式：
+一个 MCP 可以这样提供：
 
 - **本地工具**：在插件里直接写工具函数，最简单。
 - **外部服务器**：连接一个已有的 MCP 服务器，通过 HTTP 或本机进程。
@@ -61,7 +61,7 @@ context.mcp.register({
 
 ### 和页面上下文配合
 
-如果你的插件有页面，可以用[页面上下文](ui.md#向-ai-提供页面上下文)告诉 AI 用户正在看什么，再用 MCP 工具让 AI 对它执行操作。例如页面上下文提供当前书籍的 ID，工具 `add_note` 接收书籍 ID 和内容。
+如果你的插件有页面，可以用[页面上下文](pages.md#向-ai-提供页面上下文)告诉 AI 用户正在看什么，再用 MCP 工具让 AI 对它执行操作。例如笔记页面在页面上下文里提供当前笔记的键 `{ noteKey }`，用户说「总结这条笔记」时，AI 就能把这个键传给 `read_note`。
 
 ## 外部服务器
 
@@ -127,14 +127,17 @@ context.mcp.register({
 
 ### 1. 工具返回展示数据
 
-本地工具除了 `content`，还可以返回 `render`：
+本地工具除了 `content`，还可以返回 `render`。把上面 `read_note` 的 `execute` 改成：
 
 ```ts
-async execute(args) {
-  const books = await searchBooks(String(args.query));
+async execute(args, { signal }) {
+  if (typeof args.key !== "string") throw new Error("请提供笔记的键");
+  const note = await context.storage.get(args.key);
+  signal.throwIfAborted();
+  if (note === undefined) return { content: "未找到笔记" };
   return {
-    content: JSON.stringify(books),
-    render: { version: 1, data: { books } },
+    content: JSON.stringify(note),
+    render: { version: 1, data: { key: args.key, text: typeof note === "string" ? note : JSON.stringify(note) } },
   };
 }
 ```
@@ -148,12 +151,20 @@ async execute(args) {
 在 `async activate` 中，先注册 MCP，再注册组件：
 
 ```tsx
+import { Panel, PanelTitle } from "@tau/ui";
+
 await context.chat.registerToolRenderer({
-  mcpId: "books",
-  toolName: "search_books",
+  mcpId: "notes",
+  toolName: "read_note",
   component: ({ execution, data, dataVersion, renderDefault }) => {
     if (execution.status !== "success" || dataVersion !== 1) return renderDefault();
-    return <BookList books={(data as { books: Book[] }).books} />;
+    const note = data as { key: string; text: string };
+    return (
+      <Panel>
+        <PanelTitle>{note.key}</PanelTitle>
+        <p>{note.text}</p>
+      </Panel>
+    );
   },
 });
 ```
@@ -180,3 +191,7 @@ await context.chat.registerToolRenderer({
 - 用 `@tau/ui` 组件和主题变量编写样式，与聊天界面保持一致。
 - 插件停用后，历史消息回到通用展示；重新启用后恢复。
 - `registerToolRenderer` 返回 `Promise<Disposable>`，注册失败时抛出异常。插件停用时自动注销。
+
+## 下一步
+
+想告诉 AI 什么时候该调用哪个工具、参数怎么填，随插件附带一份 [Skill](skills.md)。

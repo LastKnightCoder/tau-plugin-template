@@ -85,8 +85,8 @@ git push origin v1.1.0
 
 ## 用户如何更新
 
-- 用户从插件中心安装的插件直接启用。更新时，只有页面、命令、设置的插件即时生效；带编辑器块或白板元素的插件，在用户重启 Tau 后生效。手机上安装和更新都在重新打开应用后生效。
-- 插件中心按用户的平台和 Tau 版本挑选可安装的版本。提高了 `minAppVersion` 后，版本较旧的用户会停在上一个兼容的版本。
+- 用户从插件中心安装的插件直接启用。桌面上，只有页面、设置、命令的插件安装和更新后立即生效；带编辑器块或白板元素的插件，在用户重启 Tau 后生效，插件页会提示「立即重启」。手机上，安装、更新或启停后，插件中心顶部会出现「插件变更等待生效」的横幅，用户点「立即生效」即可，不用重新打开应用。
+- 插件中心按用户的平台和 Tau 版本挑选可安装的版本。提高了 `minAppVersion` 后，Tau 版本低于它的用户会停在上一个兼容的版本。
 - 新版本启用失败时，用户可以「恢复上一版」。恢复只换回代码，不会回退数据。
 
 所以改变存储的数据结构时，要让新版本能读懂旧数据，也尽量让旧版本读到新数据时不出错，见[存储与网络](storage-and-network.md#使用要点)。
@@ -95,37 +95,42 @@ git push origin v1.1.0
 
 ## 升级 SDK
 
-模板锁定了 `@tau/plugins` 和 `@tau/ui` 的精确版本。需要使用新版 SDK 提供的能力时再升级。
+模板锁定了 `@tau/plugins` 和 `@tau/ui` 的精确版本，两个包一起升级。各版本的变化见已安装包中的 `node_modules/@tau/plugins/CHANGELOG.md`。下面以把 `@tau/plugins` 从 `0.55.0` 升到 `0.56.0`、`@tau/ui` 从 `0.6.0` 升到 `0.7.0` 为例，换成你实际的版本号。
 
 ### 1. 允许安装新版本
 
-模板的 `pnpm-workspace.yaml` 启用了 pnpm 的发布时间保护，刚发布的包需要等待一段时间才能安装。把要升级的版本加进 `minimumReleaseAgeExclude`，先保留旧版本的条目：
+模板的 `pnpm-workspace.yaml` 启用了 pnpm 的发布时间保护，刚发布的包要等一段时间才能安装。把两个包的新版本加进 `minimumReleaseAgeExclude`，**旧版本的条目先留着**：
 
 ```yaml
 minimumReleaseAgeExclude:
-  - "@xiongtao.xt/tau-plugins@<当前版本>" # 升级完成后再删
-  - "@xiongtao.xt/tau-plugins@<新版本>"
+  - "@xiongtao.xt/tau-plugins@0.55.0"
+  - "@xiongtao.xt/tau-ui@0.6.0"
+  - "@xiongtao.xt/tau-plugins@0.56.0"
+  - "@xiongtao.xt/tau-ui@0.7.0"
 ```
 
-只为你确认过的版本添加例外，不要关闭整个保护。
+旧条目要等锁文件更新后再删。现在就删，pnpm 读到锁文件里的旧版本也会检查发布时间，报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`。只为你确认过的版本添加例外，不要关闭整个保护。
 
-### 2. 更新依赖
+### 2. 更新依赖并构建
 
 ```sh
-pnpm add @tau/plugins@npm:@xiongtao.xt/tau-plugins@<新版本> --save-exact
-pnpm install --frozen-lockfile
+pnpm add @tau/plugins@npm:@xiongtao.xt/tau-plugins@0.56.0 @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.0 --save-exact
 pnpm build
 ```
 
-### 3. 清理
+`pnpm add` 会同时改写 `package.json` 和 `pnpm-lock.yaml`。构建失败时，按类型错误修改代码，React 保持模板锁定的版本：它由 Tau 提供，版本不一致可能导致插件无法运行。
 
-构建通过后，从 `minimumReleaseAgeExclude` 中删除旧版本的条目，再运行一次 `pnpm install --frozen-lockfile`。提交 `package.json`、`pnpm-lock.yaml` 和 `pnpm-workspace.yaml`。
+### 3. 删除旧条目
 
-各版本的变化见已安装包中的 `node_modules/@tau/plugins/CHANGELOG.md`。
+构建通过后，从 `minimumReleaseAgeExclude` 中删掉两个旧版本的条目，只留新版本：
 
-- React 保持模板锁定的版本，它由 Tau 提供，版本不一致可能导致插件无法运行。
-- 新能力需要较新的 Tau 时，同时提高 `targets` 里对应平台的 `minAppVersion`；带本机后台的插件提高顶层的 `minAppVersion`。
-- 升级后在 Tau 中重新验证一遍主要功能。
+```yaml
+minimumReleaseAgeExclude:
+  - "@xiongtao.xt/tau-plugins@0.56.0"
+  - "@xiongtao.xt/tau-ui@0.7.0"
+```
+
+再运行一次 `pnpm install --frozen-lockfile`，确认不报错（GitHub 上的发布工作流也是这样安装的）。然后提交 `package.json`、`pnpm-lock.yaml` 和 `pnpm-workspace.yaml`，并在 Tau 中重新验证一遍主要功能。
 
 ### 同步模板的更新
 

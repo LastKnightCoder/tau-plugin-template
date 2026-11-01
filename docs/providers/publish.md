@@ -2,7 +2,7 @@
 
 发布提供方让用户把 Tau 生成的博客站点发布到你接入的目标，比如对象存储、静态托管服务或 Git 仓库。Tau 负责生成站点文件、计算增量、重试和清理旧文件；插件只负责把文件送到远端。
 
-先读[服务提供方](README.md)了解共同的写法。开发博客模板或独立站点请看[站点数据](../site-data.md)。博客发布只在桌面可用。
+先读[服务提供方](README.md)了解共同的写法。开发博客模板或独立站点请看[站点数据](../site-data.md)。博客发布只在桌面可用，见[多端适配](../portability.md)。
 
 ## 两种发布方式
 
@@ -134,21 +134,59 @@ context.settings.register({
 });
 ```
 
-表单同时出现在两处：插件详情的「设置」里，点保存时测试连接；博客发布页的站点设置抽屉里，随输入自动保存。需要选择本机目录（如 Git 缓存目录）时，用 `service-choice` 字段，`service` 写 `git.cacheDirectory`；只在某个开关打开时才需要的字段用 `visibleWhen`。保存配置不会改变当前选用的发布目标。字段写法见[同步存储 · 配置表单](sync.md#配置表单)。
+表单同时出现在两处：插件详情的「设置」里，点「保存并测试」时保存并测试连接；博客发布页的「站点设置」里，随输入自动保存。需要选择本机目录（如 Git 缓存目录）时，用 `service-choice` 字段，`service` 写 `git.cacheDirectory`；只在某个开关打开时才需要的字段用 `visibleWhen`。保存配置不会改变当前选用的发布目标。字段写法见[服务提供方 · 配置表单](README.md#配置表单)。
 
 ### 自定义组件
 
-扫码登录等表单表达不了的交互，改用组件。组件收到 `publishConfig`：`value` 和 `save(value)`。它显示在「站点设置 · 发布目标」的卡片里，位于 Tau 的连接状态和「服务」行之后。为了和周围的界面一致：
+扫码登录等表单表达不了的交互，改用组件。组件收到 `publishConfig`：`value` 和 `save(value)`，显示在插件详情的「设置」里；「站点设置」里只显示连接状态和一个「在插件页配置」按钮，点了回到你的组件。
 
-- **按行排列**：每行左侧是 64px 宽的标签，右侧是控件；行高至少 46px，内边距 `8px 12px`，行与行之间用 `--tau-line-2` 的顶部边线分隔。标签字号用 `--tau-text-meta`，颜色用 `--tau-ink-2`。
-- **不要再包一层卡片或标题**。
-- **自动保存**：不提供「保存」和「测试连接」按钮，测试连接与完成由 Tau 提供。用户停止输入约 600ms 或输入框失焦时调用 `save`，组件卸载前保存未提交的修改。Tau 回写的配置与你最近一次保存的值相同时，不要覆盖用户正在输入的内容。
-- 辅助操作（如「读取仓库列表」）放在对应输入框的尾部；不常用的选项收进「高级选项」折叠区。
-- `save` 失败时，在表单末行显示错误，保留用户输入。
+组件里的每个设置项用 `@tau/ui` 的 `SettingRow`，保存交给 `useSettingsDraft`，就和 Tau 自己的设置项对齐，不用另写保存按钮：
+
+```tsx
+import { useState } from "react";
+import { useSettingsDraft, type JsonValue, type PluginSettingsProps } from "@tau/plugins";
+import { Input, SettingRow } from "@tau/ui";
+
+function readRepository(value: JsonValue | undefined) {
+  return value && typeof value === "object" && !Array.isArray(value) && typeof value.repository === "string"
+    ? value.repository
+    : "";
+}
+
+function PublishSettings({ publishConfig }: PluginSettingsProps) {
+  const saved = readRepository(publishConfig?.value);
+  const [repository, setRepository] = useState(saved);
+
+  useSettingsDraft({
+    dirty: repository !== saved,
+    changes: [{ label: "仓库", from: saved, to: repository }],
+    save: () => publishConfig?.save({ repository }),
+    reset: () => setRepository(saved),
+  });
+
+  if (!publishConfig) return null;
+  return (
+    <SettingRow title="仓库" description="例如 yourname/blog">
+      <Input value={repository} onChange={event => setRepository(event.target.value)} />
+    </SettingRow>
+  );
+}
+
+context.settings.register({
+  id: "publish",
+  title: "我的存储",
+  target: "publish",
+  component: PublishSettings,
+});
+```
+
+- 不要再包一层卡片或标题，Tau 已经放在一张设置卡片里。
+- 辅助操作（如「读取仓库列表」）放在对应输入框旁边；不常用的选项收进折叠区。
+- `save` 抛错时保存条显示错误信息，用户的输入保留。
 
 ## 注意事项
 
-- 用户离开发布页后，发布会在后台继续；插件停用、切换工作区或发起发布的窗口关闭时，本轮发布会中止。
+- 用户离开发布页后，发布会在后台继续；插件停用、切换资料库或发起发布的窗口关闭时，本轮发布会中止。
 - 每个请求都传入 `signal`，检查 `response.ok`。不要吞掉异常后返回成功，否则 Tau 会误以为文件已经发布。
 - Token 不要出现在 `identity`、公开地址、错误信息、README 和日志里。
 - `create` 同步返回实例，连接和上传放在各个异步方法里。
@@ -156,4 +194,4 @@ context.settings.register({
 
 ## 测试清单
 
-用真实的远端验证成功之后，再声称支持该目标。至少覆盖：配置保存失败、连接失败、重复发布、远端文件已存在或已删除、用户取消、插件停用、切换工作区，以及快照提交中途失败后的重试。
+用真实的远端验证成功之后，再声称支持该目标。至少覆盖：配置保存失败、连接失败、重复发布、远端文件已存在或已删除、用户取消、插件停用、切换资料库，以及快照提交中途失败后的重试。

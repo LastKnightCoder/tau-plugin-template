@@ -1,6 +1,6 @@
 # 多端适配
 
-同一个插件包可以同时运行在 Tau 桌面端、Android 和 iOS 上：写一份代码、发布一个 ZIP，用户在哪个平台安装，就在哪个平台运行。其他文档里的接口，手机上能不能用，以这里的[接口表](#各平台可用的接口)为准。
+同一个插件包可以同时运行在 Tau 桌面、Android 和 iOS 上：写一份代码、发布一个 ZIP，用户在哪个平台安装，就在哪个平台运行。各平台的差异都集中在这一篇；其他文档里的接口在手机上能不能用，以这里的[接口表](#各平台可用的接口)为准。
 
 ## 声明支持的平台
 
@@ -17,8 +17,8 @@
 ```
 
 - 没有列出的平台不能安装这个插件。至少要列一个平台。
-- `minAppVersion` 填你实际测试过的最低 Tau 版本，写完整的版本号，不写范围。用户的 Tau 低于这个版本时，插件中心不会向他们提供这一版。
-- 列出一个平台，表示插件的**全部功能**都已在这个平台上适配并测试过。只有部分功能能用的平台，先不要列。
+- `minAppVersion` 必填，填你实际测试过的 Tau 版本（桌面在「设置 › 关于与更新」里查看，手机在「我的」页底部的「关于」里查看），写完整的版本号，不写范围。用户的 Tau 低于这个版本时，插件中心不会向他们提供这一版。
+- 列出一个平台，表示插件的**全部功能**都已在这个平台上适配并测试过。只有部分功能能用的平台，不要列。
 - 用到下表中只有桌面支持的接口时，只写 `desktop`。
 
 你不需要在 manifest 里声明用到了哪些接口：Tau 根据平台和版本判断能否安装，接口本身由代码注册。
@@ -27,28 +27,29 @@
 
 | 接口                                                           | 桌面 | Android / iOS | 说明                                                                                                                      |
 | -------------------------------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的」顶部功能宫格                                                                        |
+| `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的」顶部功能宫格，见[页面与入口](pages.md)                                              |
 | `settings`、`storage`、`fetch`、`websocket`                    | ✓    | ✓             |                                                                                                                           |
-| `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，主要功能要另外注册功能入口                                                                |
 | `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                                                                                           |
+| `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，用户找不到；主要功能要另外注册功能入口                                                    |
+| `home`                                                         | ✓    | ✓             | 手机上显示在「今天」页，见[挂到 Tau 的界面里 · 首页面板](app-surfaces.md#首页面板)                                        |
+| `actions`                                                      | ✓    | 部分          | 手机只有卡片、文章、项目文档详情页的「更多」菜单，见[挂到 Tau 的界面里 · 对象动作](app-surfaces.md#对象动作)              |
+| `sidebar`、`views`、`notebooks`、`notifications`               | ✓    |               | 跨平台的入口用 `navigation`，结果显示在页面里                                                                             |
+| `speech`                                                       |      | ✓             | 见[通知、语音输入与朗读 · 语音输入](notifications-and-voice.md#语音输入)                                                  |
+| `tts.open`                                                     | ✓    |               | 见[通知、语音输入与朗读 · 朗读](notifications-and-voice.md#朗读)                                                          |
+| `upload.save`                                                  | ✓    |               | 见[插件内容与记录 · 保存资源文件](plugin-content.md#保存资源文件)                                                         |
 | 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                                                                                   |
-| `sync`、`upload`、`tts`、`asr` 提供方                          | ✓    | ✓             | 配置表单两端都由 Tau 渲染                                                                                                 |
-| `images` 提供方                                               | ✓    | ✓             | 手机 0.2.16 起，支持生成、参考图编辑与账号配置                                                                               |
+| `sync`、`upload`、`tts`、`asr`、`images` 提供方                | ✓    | ✓             | 见[服务提供方](#服务提供方)                                                                                               |
 | `embeddings`、`video`、`publish` 提供方                        | ✓    |               |                                                                                                                           |
-| `home`                                                         | ✓    | ✓             | 手机 0.2.16 起，见[界面 · 首页面板](ui.md#首页面板)                                                                       |
-| `speech`                                                       |      | ✓             | 手机 0.2.16 起，见[界面 · 语音输入](ui.md#语音输入)                                                                       |
-| `tts.open`、`upload.save`                                      | ✓    |               | 见[界面 · 朗读](ui.md#朗读)与[用户数据 · 保存资源文件](user-data.md#保存资源文件)                                           |
-| `sidebar`、`views`、`notifications`                            | ✓    |               | 跨平台的入口用 `navigation`                                                                                               |
-| `notebooks`                                                    | ✓    |               | 见[界面 · Notebook 输出](ui.md#notebook-输出)                                                                             |
-| `actions`                                                      | ✓    | 部分          | 手机只有卡片、文章、项目文档详情页的「更多」菜单，见[界面 · 对象动作](ui.md#对象动作)                                       |
-| `permissions`、`data`、`content`、`events`                     | ✓    | 部分          | 手机 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程，见[用户数据](user-data.md)                                      |
-| `app`                                                          | ✓    | 部分          | 手机可以选择、描述和打开上述内容与插件内容；`run` 只有新建卡片、插入项目文档和协作共享，见[用户数据](user-data.md#选择并打开已有内容) |
-| `ContentEditor`、`ContentPreview`、`EntityRef`                 | ✓    | 部分          | 手机上在插件页面与设置里可用，能引用的类型与 `app` 相同                                                                   |
-| `entities`、`records`、`links`、`transaction`                  | ✓    | 部分          | 手机 0.2.13 起可用，见[用户数据 · 插件内容](user-data.md#插件内容)                                                        |
-| `flashcards`                                                   | ✓    | 部分          | 手机可以查询牌组、创建牌组和闪卡、打开手动制卡；AI 制卡只有桌面，见[闪卡](flashcards.md)                                  |
-| `ai`                                                           | ✓    | 部分          | 手机支持文本、图片和流式调用，但没有插件 AI 功能的配置入口，见[AI](ai.md)                                                 |
+| `permissions`、`data`、`content`、`events`                     | ✓    | 部分          | 手机能读写卡片、文章、项目、项目文档、待办和日程；白板、Notebook、材料与对话只有桌面能读，见[读写用户数据](user-data.md)  |
+| `app`                                                          | ✓    | 部分          | 手机可以选择、描述和打开上述内容与插件内容，`run` 只有新建卡片、插入项目文档和协作共享，见[引用用户的内容](references.md) |
+| `ContentEditor`、`ContentPreview`、`EntityRef`                 | ✓    | 部分          | 手机上在插件页面与设置里可用，能引用的类型与 `app` 相同，见[正文](document-body.md#嵌入正文编辑器)                        |
+| `entities`、`records`、`links`、`transaction`                  | ✓    | ✓             | 插件停用后，手机上不能打开它的内容，见[插件内容与记录](plugin-content.md)                                                 |
+| `excerpts`                                                     | ✓    | 部分          | 手机上插件可以注册、写入和读回摘录，但用户不能在手机上引用摘录，见[摘录](excerpts.md)                                     |
+| `materials`                                                    | ✓    | 部分          | 手机上只能把本插件写入的摘录转为卡片，其他材料返回空的动作列表                                                            |
+| `flashcards`                                                   | ✓    | 部分          | 手机可以查询和创建卡组与闪卡、打开手动制卡；AI 生成只有桌面，见[闪卡](flashcards.md)                                      |
+| `ai`                                                           | ✓    | 部分          | 手机支持文本、图片和流式调用，但没有给插件 AI 功能选模型的入口，见[AI](ai.md)                                             |
 | `mcp`、`chat`                                                  | ✓    | 部分          | 手机上可以注册，但工具不会出现在手机的对话里，见[MCP 工具](mcp.md)                                                        |
-| `excerpts`、`materials`、`services`                            | ✓    |               |                                                                                                                           |
+| `services`                                                     | ✓    |               |                                                                                                                           |
 | 白板扩展（`whiteboardExtensions`）                             | ✓    |               |                                                                                                                           |
 | `backend`（本机后台）                                          | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                                                                                |
 | 随插件附带的 Skill                                             | ✓    | 部分          | 手机上 AI 能读说明和参考资料，不执行脚本，见[Skill](skills.md)                                                            |
@@ -56,17 +57,13 @@
 
 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
 
-### 手机上的最低版本与权限
-
-用到用户数据、插件内容、闪卡或 AI 的插件，`android` 和 `ios` 的 `minAppVersion` 至少写 `0.2.13`；用到首页面板或语音输入的至少写 `0.2.16`。
-
-手机上可以申请的权限：
+### 手机上能申请的权限
 
 - 用户数据：`cards`、`articles`、`projects`、`documents`、`todos`、`calendar` 各自的 `:read`、`:write`、`:delete`，以及 `flashcards:read`、`flashcards:write`。
 - AI：[AI](ai.md) 里列出的 `ai:<能力名>`。
 - 语音输入：`speech:input`。
 
-声明了 `android` 或 `ios` 的插件申请了其他权限，构建和插件中心都会拒绝。和桌面一样，安装不等于授权，第一次访问时由用户决定。
+声明了 `android` 或 `ios` 的插件申请了其他权限，构建和插件中心都会拒绝。`minAppVersion` 填得太低、低于某个权限要求的手机版本时，`pnpm build` 会报错并给出需要的版本，按提示改高即可。和桌面一样，安装不等于授权，第一次访问时由用户决定，见[权限](permissions.md)。
 
 ## 页面与入口
 
@@ -93,7 +90,7 @@ context.settings.register({
 
 - 只是从别的页面打开的详情页，可以不注册入口。
 - 手机上没有命令面板，主要功能一定要有入口。
-- 页面容器默认已避开系统安全区，布局与吸底规则见[手机页面的布局边界](ui.md#手机页面的布局边界)。
+- 页面容器默认已避开系统安全区，布局与吸底规则见[页面与入口 · 手机页面的布局边界](pages.md#手机页面的布局边界)。
 - `@tau/ui` 的 `Dialog`、`Drawer` 在手机上会处理系统返回键和安全区，直接使用即可。
 - 手机系统可能随时结束应用进程，不保证调用离开守卫或 `deactivate`。数据在用户操作时就保存。
 
@@ -139,16 +136,40 @@ function Toolbar() {
 
 两种指针可以同时存在，比如接了鼠标的平板。它们说的是设备有什么，不是这一次操作来自哪里；判断某次手势的来源，看 `PointerEvent.pointerType`。接入鼠标时增加便捷操作，不要因此删掉触摸按钮。
 
+### App 回到前台
+
+用户切到别的应用再回来（手机），或者切到别的窗口再回到 Tau（桌面），Tau 会在 `window` 上派发 `tau:app-foreground`；离开时派发 `tau:app-background`。适合回到前台时静默刷新一次外部数据，比如同步阅读进度：
+
+```ts
+let running: Promise<void> | undefined;
+// 「立即同步」按钮也调用它，两处共用同一个进行中的请求
+const syncQuietly = () =>
+  (running ??= syncReadingProgress(context).finally(() => {
+    running = undefined;
+  }));
+
+const onForeground = () => void syncQuietly().catch(() => undefined);
+window.addEventListener("tau:app-foreground", onForeground);
+context.register({
+  dispose: () => window.removeEventListener("tau:app-foreground", onForeground),
+});
+```
+
+- 短时间内反复切换只会收到一次 `tau:app-foreground`（约 500 毫秒内合并）。刚打开应用、一直停在前台时不会收到。
+- Tau 内部切换页面不算离开前台；页面切走、切回用组件的 effect 处理，见[页面与入口](pages.md#页面显示状态与-esc)。
+- 自动刷新不要弹提示，结果直接更新到界面上。和手动刷新共用同一个进行中的请求，不要同时发出两次。
+- 用防抖、定时器推迟的刷新，在收到 `tau:app-background` 时取消。网络请求用 `context.fetch`，插件停用时会自动取消，停用后不要再补跑。
+
 ## 编辑器块
 
 编辑器块在桌面和手机上使用同一份 `editorExtensions` 和 `editorCodecs`：节点类型、数据和渲染都相同，不要为手机另建一套节点。
 
-- 手机上，插入、上下移动、删除等标准操作由 Tau 提供；用 `SourceBlockEditor` 的源码块，编辑时会打开全屏的源码页。见[编辑器扩展 · 源码预览块](editor.md#源码预览块)。
+- 手机上，插入、上下移动、删除等标准操作由 Tau 提供；用 `SourceBlockEditor` 的源码块，编辑时会打开全屏的源码页。见[源码块与媒体块 · 源码预览块](editor-source-media.md#源码预览块)。
 - 块里自定义的操作（如图册排序、画图）要自己适配触摸：保留能点击的按钮，拖拽只作为增强。
 
 ## 服务提供方
 
-同步存储、资源上传、语音合成、语音识别四类提供方，在桌面和手机上使用同一套注册接口和配置表单。配置界面由 Tau 按平台渲染，你不需要写两套。同步的分块、校验和重组也由 Tau 处理，不需要手机专用的分支。写法见[服务提供方](providers/README.md)。
+同步存储、资源上传、语音合成、语音识别、图片生成这几类提供方，在桌面和手机上使用同一套注册接口和配置表单。配置界面由 Tau 按平台渲染，你不需要写两套。同步的分块、校验和重组也由 Tau 处理，不需要为手机另写分支。嵌入模型、视频来源和博客发布只在桌面。写法见[服务提供方](providers/README.md)。
 
 ## 测试
 

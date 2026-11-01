@@ -1,6 +1,17 @@
 # 闪卡
 
-插件可以帮用户创建闪卡。按插件介入的多少，从轻到重有这些方式：
+插件可以帮用户把一段资料做成闪卡，放进 Tau 的卡组里复习。适合在读书、课程、文献这类插件里加一个「做成闪卡」按钮：最简单的做法是打开 Tau 自己的制卡窗口，用户确认后保存，插件不需要任何权限。
+
+```ts
+// 在按钮的点击事件里调用
+const result = await context.flashcards.openCreate({
+  content: "牛顿第二定律：F = ma。",
+  title: "力学笔记",
+});
+// result.status：completed 或 cancelled；result.cards：用户保存的闪卡
+```
+
+插件介入得更多时，有这些方式可选：
 
 | 方式                            | 适合                                      | 需要的权限                                              |
 | ------------------------------- | ----------------------------------------- | ------------------------------------------------------- |
@@ -8,7 +19,7 @@
 | [直接创建](#直接创建卡组与闪卡) | 插件已经整理好了题目，直接写入            | `flashcards:read`、`flashcards:write`                   |
 | [AI 生成](#ai-生成)             | 从一段资料生成草稿，或生成后直接保存      | `ai:flashcardGeneration`，保存还需要 `flashcards:write` |
 
-在 manifest 中声明用到的权限：
+在 manifest 中声明用到的权限，用户如何授权见[权限](permissions.md)：
 
 ```json
 {
@@ -22,7 +33,7 @@
 
 AI 制卡沿用用户在 Tau 中为「闪卡制作」分配的模型，不需要插件另外配置。用量、额度与授权方式和 [AI](ai.md#使用-tau-已有的模型分配) 中的 `requestCapability` 相同，用户撤销授权会取消进行中的生成。
 
-手机上（0.2.13 起）可以查询牌组、创建牌组和闪卡，也可以打开手动制卡窗口让用户改题干后保存。AI 生成（`mode: "ai"`、`generate`、`generateAndSave`）只有桌面支持，声明了 `android` 或 `ios` 的插件不要申请 `ai:flashcardGeneration`。
+手机上可以查询和创建卡组与闪卡，也可以打开手动制卡窗口；AI 生成只有桌面支持，声明了 `android` 或 `ios` 的插件不要申请 `ai:flashcardGeneration`，见[多端适配](portability.md#各平台可用的接口)。
 
 ## 打开制卡窗口
 
@@ -66,7 +77,7 @@ await context.flashcards.openCreate({
 });
 ```
 
-`contentRef` 来自 [`context.data`](user-data.md) 或 [`context.entities`](user-data.md#插件内容)。引用其他内容的正文时需要对应的读取权限，插件自己的内容不需要。引用已失效或没有权限时，保存会被拒绝。
+`contentRef` 来自 [`context.data`](user-data.md) 或[插件内容](plugin-content.md#插件内容)。引用其他内容的正文时需要对应的读取权限，插件自己的内容不需要。引用已失效或没有权限时，保存会被拒绝。
 
 ## 直接创建卡组与闪卡
 
@@ -138,9 +149,11 @@ const result = await context.flashcards.generateAndSave({
 - `generate` 返回的草稿和 `createCard` 的参数结构相同，可以直接传给 `createCard`。
 - `generateAndSave` 会绕过用户预览直接写入，只在用户明确要求时使用。
 - `generateAndSave` 逐张保存，不是一个整体事务：部分成功、部分失败都有可能。**不要对整个调用重试**，否则已成功的闪卡会重复创建。需要精确重试时，用 `generate` 拿到草稿，再逐张 `createCard`。
-- 取消或切换工作区会阻止后续写入，但已经写入的闪卡不会回滚。
+- 取消或切换资料库会阻止后续写入，但已经写入的闪卡不会回滚。
 - 用户没有为「闪卡制作」分配模型、未授权、额度不足或内容为空时，调用会明确失败。
 
 ## 适用范围
 
 闪卡接口只在插件运行时中可用，编辑器块的渲染组件、博客中都不能使用。
+
+资料来自用户的卡片或文章时，读取正文的写法见[正文](document-body.md#读写正文)。

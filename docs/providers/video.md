@@ -12,7 +12,7 @@
 2. Tau 调用 `matches(url)` 确认链接属于你的插件，再调用 `resolve(url)` 获取标题和可选清晰度。
 3. 用户选择清晰度，Tau 把这个清晰度的 `ref` 保存到文档中。
 4. 需要下载时，Tau 调用 `getPlayback(ref)` 获取当前可用的流地址，下载并缓存。之后离线也能播放。
-5. 打开尚无转录的视频笔记时，Tau 优先调用可选的 `getCaptions(ref, signal)`；有结果就保存并展示，没有结果或用户不满意时可手动转录音频。
+5. 用户打开一条还没有字幕和转录的视频笔记时，Tau 调用可选的 `getCaptions(ref, signal)`，拿到字幕就直接显示在笔记里。
 
 ## 注册
 
@@ -62,17 +62,22 @@ context.video.register({
 
 ## 平台字幕
 
-字幕接口在 SDK 0.52.0 中新增。直接读取来源提供的 CC 或自动字幕，保留原字幕的时间戳；没有可用字幕时返回 `null`，也可以省略该方法。网络或认证失败可以抛出错误，宿主保留手动转录入口。实现须响应 `signal`；停用插件、取消或切库后不提交迟到结果。
+实现 `getCaptions` 后，用户打开视频笔记就能直接看到网站自带的字幕（人工字幕或自动字幕），不用等转录。读取来源提供的字幕，保留原字幕的时间戳；视频没有字幕时返回 `null`，不支持字幕的来源可以省略这个方法。
 
 ```ts
 async getCaptions(ref, signal) {
   const captions = await fetchCaptions(context, ref, signal);
   if (!captions?.length) return null;
-  return { language: "zh-CN", segments: captions };
+  return {
+    language: "zh-CN",
+    segments: captions.map(line => ({ text: line.text, start: line.startMs, end: line.endMs })),
+  };
 }
 ```
 
-宿主只自动填充尚无字幕或转录的笔记，已保存内容不会因重新打开而被替换。字幕不要求本地转录模型；用户的「重新转录」始终使用音频识别。
+- `segments` 每项是 `{ text, start, end }`，`start`、`end` 是相对视频起点的毫秒数，`end` 必须大于 `start`。时间戳无效时 Tau 视为失败，空白的句子会被去掉，全部为空时按没有字幕处理。
+- Tau 只给还没有字幕或转录的笔记自动填充，已保存的内容不会因为重新打开而被替换。用户在笔记里点「转录」时用的是音频识别，不调用 `getCaptions`。
+- 网络或认证失败时抛出可读的错误，用户仍可以点「转录」。读取超过 30 秒会被取消，把 `signal` 传给每个请求。
 
 ## ref：可以长期保存的视频引用
 
@@ -107,7 +112,32 @@ const probe = await context.services.videoExtractor.probe(url, { signal });
 
 根据 `formats` 组织清晰度，`getPlayback` 时返回 `{ kind: "extract", url, videoFormat, audioFormat }`。插件不能自己启动外部程序下载视频。
 
-同一解析器可读取字幕：`context.services.videoExtractor.getCaptions(url, { proxy, signal })` 返回 `VideoCaptions | null`。它支持 JSON3、WebVTT（VTT）和 SubRip（SRT），只下载一条字幕轨：优先人工字幕、同类优先原语言，同一语言按 JSON3 → VTT → SRT 选择格式。结果统一为纯文本与毫秒起止时间；没有受支持的字幕轨或有效片段时返回 null，不下载视频或调用转录模型。代理与本次调用一致；只有接入该服务的桌面客户端支持，较早客户端不会调用新字幕接口。
+内置解析器支持的网站，字幕也可以交给它读，结果直接作为 `getCaptions` 的返回值：
+
+```ts
+context.video.register({
+  id: context.pluginId,
+  name: "我的视频站",
+  create: (config): VideoInstance => {
+    const proxy = readProxy(config); // 配置表单里的代理地址，没填时为 undefined
+    const pageUrl = (ref: VideoRef) => `https://video.example.com/v/${String(ref.videoId)}`;
+    return {
+      // matches、resolve、cacheKey 同上
+      async getPlayback(ref) {
+        return { kind: "extract", url: pageUrl(ref), videoFormat: String(ref.quality), proxy };
+      },
+      async getCaptions(ref, signal) {
+        return context.services.videoExtractor.getCaptions(pageUrl(ref), { proxy, signal });
+      },
+    };
+  },
+});
+```
+
+- 它只读一条字幕：人工字幕优先于自动字幕，同类里优先视频的原语言。
+- 支持 JSON3、WebVTT（`.vtt`）和 SubRip（`.srt`）三种字幕格式，同一语言有多种时按这个顺序选。结果已经是纯文本加毫秒起止时间，样式标签和 HTML 实体都已去掉。
+- 没有这几种格式的字幕、或字幕里没有有效的句子时返回 `null`。它不下载视频，也不做转录。
+- `proxy` 与下载视频时用的代理保持一致。
 
 ## 配置表单
 
@@ -134,7 +164,7 @@ context.settings.register({
 ## 插件不可用时
 
 - 插件未启用时，已保存的视频显示需要启用插件的提示，数据保留。
-- 手机和发布的站点上，这些视频只显示说明，不能播放。
+- 视频来源只在桌面可用（见[多端适配](../portability.md)）。手机和发布的站点上，这些视频只显示说明，不能播放。
 
 ## 测试清单
 
@@ -142,5 +172,6 @@ context.settings.register({
 - 地址过期后重新获取播放源。
 - 音视频分离的视频。
 - 已缓存的视频离线播放。
+- 实现了 `getCaptions` 时：有字幕、没有字幕和读取失败的视频各开一条新的视频笔记。
 - 更新账号配置、取消下载、停用插件。
 - 网站限制或认证失败时，返回可读的错误，不要返回无法播放的结果。

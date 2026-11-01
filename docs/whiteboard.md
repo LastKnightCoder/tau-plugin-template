@@ -1,6 +1,6 @@
 # 白板扩展
 
-在 Tau 的白板上加一种自己的元素（图形、图表、组件），以及在工具栏里创建它的工具。白板扩展目前只在桌面可用，manifest 里只声明 `desktop`。
+在 Tau 的白板上加一种自己的元素（图形、图表、组件），以及在工具栏里创建它的工具。元素随白板保存、同步和协作，复制、导出图片时也会带上。白板扩展只能在桌面使用，各平台能用哪些接口见[多端适配](portability.md#各平台可用的接口)。
 
 白板扩展分为两部分：
 
@@ -11,12 +11,15 @@
 
 ### 1. 在 manifest 中声明
 
+`categories` 里加上 `"whiteboard"`，插件中心会把它归到「白板」分类：
+
 ```json
 {
-  "categories": ["whiteboard"],
-  "targets": { "desktop": { "minAppVersion": "0.59.5" } }
+  "categories": ["whiteboard"]
 }
 ```
+
+`targets` 里只列 `desktop`，写法见[多端适配 · 声明支持的平台](portability.md#声明支持的平台)。
 
 ### 2. 定义扩展
 
@@ -99,7 +102,7 @@ export default definePlugin({
 
 ### 3. 构建、安装、重启
 
-白板扩展在 Tau 启动时装配，启用、停用和更新都要**完全退出并重新打开 Tau** 才生效。之后打开白板，在「扩展工具」菜单中就能找到「方块」。
+白板扩展在 Tau 启动时装配，启用、停用和更新都要**完全退出并重新打开 Tau** 才生效。之后打开白板，在「扩展工具」菜单中就能找到「方块」，在画布上拖出一个方块。
 
 ## 命名规则
 
@@ -123,25 +126,33 @@ export default definePlugin({
 | `create`                   | 可选。创建方式，声明后才能注册创建型工具，见[创建工具](#创建工具)                    |
 | `interaction`              | 可选。缩放手柄与连接点，见下文                                                       |
 | `schema`                   | 可选。约束 `data` 结构的 [Standard Schema](https://standardschema.dev)，必须同步校验 |
-| `dataVersion`              | `data` 结构的版本，正整数，从 `1` 开始，与插件版本号无关，见[数据版本](#数据版本)    |
+| `dataVersion`              | `data` 结构的版本，正整数，从 `1` 开始，与插件的版本号无关，见[数据版本](#数据版本)  |
 | `collaboration.textFields` | 可选。`data` 里需要多人同时编辑的顶层字符串字段，修改方式见[文本字段](#文本字段)     |
 | `resources`                | 可选。`data` 里的图片、附件地址字段，复制和导出时 Tau 据此找到资源                   |
 | `previousVersions`         | 可选。旧版本的元素声明，见[数据版本](#数据版本)                                      |
 | `sketch`                   | 可选。为 `true` 时元素支持手绘画风，见[手绘画风](#手绘画风)                          |
 | `schematic`                | 可选。简略预览，见[简略预览](#简略预览)                                              |
 
-用 `defineElement<TData>` 声明 `data` 的类型，或者传入 `schema` 让类型自动推断：
+用 `defineElement<TData>` 声明 `data` 的类型，或者传入 `schema` 让类型自动推断。下面的便签把文字存在 `data.text`，后文的[文本字段](#文本字段)接着用它：
 
-```ts
+```tsx
+import { defineElement } from "@tau/plugins/whiteboard";
+
+declare const __PLUGIN_META__: { id: string; name: string; version: string };
+
 interface StickyData {
   text: string;
 }
 
-defineElement<StickyData>({
+const sticky = defineElement<StickyData>({
   type: `${__PLUGIN_META__.id}.sticky`,
   dataVersion: 1,
   collaboration: { textFields: ["text"] },
-  render: ({ element }) => <text x={element.x} y={element.y}>{element.data.text}</text>,
+  render: ({ element }) => (
+    <text x={element.x} y={element.y}>
+      {element.data.text}
+    </text>
+  ),
 });
 ```
 
@@ -164,32 +175,35 @@ interaction: {
 
 ### 数据版本
 
-`data` 的结构有不兼容的变化（字段改名、文本字段变了）时，把 `dataVersion` 加一，并把上一版的声明放进 `previousVersions`：
+`data` 的结构有不兼容的变化（字段改名、文本字段变了）时，把 `dataVersion` 加一，并把上一版的声明放进 `previousVersions`。比如便签把文字字段从 `text` 改名为 `content`：
 
-```ts
-const sourceV1 = defineElement({
-  type: `${__PLUGIN_META__.id}.source`,
-  dataVersion: 1,
-  collaboration: { textFields: ["source"] },
-  render: () => null,
-});
-const sourceV2 = defineElement({
-  ...sourceV1,
+```tsx
+const stickyV2 = defineElement<{ content: string }>({
+  type: `${__PLUGIN_META__.id}.sticky`,
   dataVersion: 2,
-  collaboration: { textFields: ["code"] },
-  previousVersions: [{ element: sourceV1, access: "read" }],
+  collaboration: { textFields: ["content"] },
+  render: ({ element }) => (
+    <text x={element.x} y={element.y}>
+      {element.data.content}
+    </text>
+  ),
+  // 上文的 sticky 就是第 1 版
+  previousVersions: [{ element: sticky, access: "read" }],
 });
 ```
 
 - Tau 不会转换已有的数据。旧白板里的元素仍按保存时的版本、用旧声明渲染；新创建的元素用当前版本。
 - `access` 为 `edit` 时旧元素可以继续编辑，`read` 只能看，`none` 只保留数据。没有列进 `previousVersions` 的旧版本，显示为占位，数据原样保留，仍可移动、复制、删除。
+- `elements` 里只注册当前版本，旧版本通过 `previousVersions` 带上。
 - 只改渲染或新增可选字段时，不需要提高版本。
+
+编辑器块的数据版本规则相同，见[块的数据版本与协作](editor-collaboration.md#修改数据结构)。
 
 ## 创建工具
 
 ### 创建型工具
 
-元素声明了 `create` 后，注册一个 `element` 指向它的工具，用户就能在画布上用手势创建元素。
+元素声明了 `create` 后，注册一个 `element` 指向它的工具，用户就能在画布上用手势创建元素，如上文的方块。
 
 | `create` 字段 | 说明                                                                                                     |
 | ------------- | -------------------------------------------------------------------------------------------------------- |
@@ -218,7 +232,7 @@ const sourceV2 = defineElement({
 
 ### 创建前选择参数
 
-工具可以提供 `panel`，让用户先选好参数再执行：
+工具可以提供 `panel`，让用户先选好参数再执行。给方块工具加上颜色选择：
 
 ```tsx
 panel: ({ run }) => (
@@ -267,7 +281,7 @@ panel: ({ run }) => (
 
 元素组件里用 `useWhiteboardAPI()` 拿到所属扩展的 `api`。
 
-`submit` 接收一组命令，全部成功才生效，有一条失败就都不写入，返回新建元素的 `createdIds`：
+`submit` 接收一组命令，全部成功才生效，有一条失败就都不写入，返回新建元素的 `createdIds`。比如在命令里放一个方块：
 
 ```ts
 const pageId = api.getSnapshot().pageId;
@@ -300,24 +314,86 @@ api.updateElementData(createdIds[0], { label: "方块" });
 
 ### 文本字段
 
-`collaboration.textFields` 里的字段要通过文本句柄修改，不要用 `updateElementData` 整段覆盖，这样两人同时编辑时会按字符合并：
+`collaboration.textFields` 里的字段要通过文本句柄修改，不要用 `updateElementData` 整段覆盖，这样两人同时编辑时会按字符合并。便签的编辑框：
 
 ```tsx
-function StickyEditor({ element }: { element: WhiteboardElement<StickyData> }) {
+import { useEffect, useState } from "react";
+import {
+  useWhiteboardAPI,
+  type TypedBoardElement,
+} from "@tau/plugins/whiteboard";
+
+interface StickyData {
+  text: string;
+}
+
+// 只把改动的那一段交给句柄，两人同时编辑时才能按字符合并
+function diff(before: string, after: string) {
+  let start = 0;
+  while (start < before.length && before[start] === after[start]) start++;
+  let end = 0;
+  while (
+    end < before.length - start &&
+    before[before.length - 1 - end] === after[after.length - 1 - end]
+  )
+    end++;
+  return {
+    offset: start,
+    remove: before.length - start - end,
+    text: after.slice(start, after.length - end),
+  };
+}
+
+export function StickyEditor({
+  element,
+}: {
+  element: TypedBoardElement<StickyData>;
+}) {
   const api = useWhiteboardAPI();
   const [binding] = useState(() => api.getTextBinding(element.id, "text"));
-  useEffect(() => () => binding.dispose(), [binding]);
-  // binding.getSnapshot() 读取 { value, revision }，binding.subscribe(...) 监听变化
-  // 修改：binding.edit({ offset, remove, text, revision })
+  const [draft, setDraft] = useState(() => binding.getSnapshot().value);
+  const [error, setError] = useState<string | null>(null);
+
+  // 协作者的修改到达时刷新显示；卸载时释放句柄
+  useEffect(() => {
+    const stop = binding.subscribe(() => setDraft(binding.getSnapshot().value));
+    return () => {
+      stop();
+      binding.dispose();
+    };
+  }, [binding]);
+
+  return (
+    <>
+      <textarea
+        value={draft}
+        readOnly={api.readonly}
+        onChange={(event) => {
+          const next = event.target.value;
+          const { value, revision } = binding.getSnapshot();
+          setDraft(next);
+          try {
+            binding.edit({ ...diff(value, next), revision });
+            setError(null);
+          } catch {
+            // 版本过期或已变成只读：保留用户的输入，不要用新值覆盖
+            setError("修改没有保存");
+          }
+        }}
+      />
+      {error && <p role="alert">{error}</p>}
+    </>
+  );
 }
 ```
 
+- `binding.getSnapshot()` 读取 `{ value, revision }`，`binding.subscribe(listener)` 监听变化，`binding.edit({ offset, remove, text, revision })` 按位置修改。
 - 在组件里取一次句柄并复用，卸载时调用 `dispose`。页面隐藏后组件的 effect 会清理，句柄随之失效，再次显示时重新取。
 - 修改时带上读取时的 `revision`。版本过期或文档变成只读时，修改会被拒绝；这时保留用户的输入，不要读取新值后直接覆盖。
 
 ### 异步操作
 
-插件停用、切换工作区、画布关闭或变成只读后，迟到的修改会被拒绝。异步操作开始前调用 `api.captureSubmission(elementId)`，它返回一个检查函数；`await` 结束后先调用它，返回 `false` 就放弃这次结果：
+插件停用、切换资料库、画布关闭或变成只读后，迟到的修改会被拒绝。异步操作开始前调用 `api.captureSubmission(elementId)`，它返回一个检查函数；`await` 结束后先调用它，返回 `false` 就放弃这次结果：
 
 ```ts
 const stillValid = api.captureSubmission(element.id);
@@ -336,6 +412,8 @@ api.updateElementData(element.id, { title });
 - `SketchPaths` 渲染手绘路径；`sketch` 命名空间提供手绘算法（`wobble`、`resample`、`inkOutline` 等），直接复用，不要自己复制实现。
 - `usePageSketch()` 读取所在页面的画风；`sketch.hashSeed(text)` 为预览生成稳定的随机种子。
 - 属性面板可以使用 `AttrPopover`、`AttrToggle`、`OptionGrid`、`Seg` 组件，`SketchPopover` 提供与 Tau 一致的笔触设置。
+
+这些都从 `@tau/plugins/whiteboard` 导入。
 
 ## 简略预览
 
@@ -370,14 +448,14 @@ defineWhiteboardExtension({
 });
 ```
 
-- 存储按插件和工作区隔离，与 `context.storage` 是同一份数据。它保存的是插件偏好，不随白板同步给协作者。
+- 存储按插件和资料库隔离，与 `context.storage` 是同一份数据。它保存的是插件偏好，不随白板同步给协作者。
 - 只在交互贡献、工具面板、属性面板和 `create.build` 中使用。元素的 `render` 和 `schematic` 只能依据元素数据，不能读存储。
 - 读取失败时不要当成空数据再写回，否则会覆盖用户原有的偏好。
 
 ## 样式
 
 - 颜色使用 Tau 的主题变量（如 `var(--tau-accent)`），这样会跟随明暗主题。
-- 需要 Tailwind 工具类时，可以导入 `@tau/plugins/tailwind.css`，它提供 Tau 语义类到主题变量的映射。
+- 需要 Tailwind 工具类时，可以导入 `@tau/plugins/tailwind.css`，它提供 Tau 语义类到主题变量的映射。类名要加插件专属前缀，见[用 Tailwind 时加前缀](ui-components.md#用-tailwind-时加前缀)。
 
 ## 停用与卸载
 
