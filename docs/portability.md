@@ -37,6 +37,7 @@
 | `embeddings`、`video`、`publish` 提供方                        | ✓    |               |                                                                                                                           |
 | `home`                                                         | ✓    | ✓             | 手机 0.2.16 起，见[界面 · 首页面板](ui.md#首页面板)                                                                       |
 | `speech`                                                       |      | ✓             | 手机 0.2.16 起，见[界面 · 语音输入](ui.md#语音输入)                                                                       |
+| `tts.open`、`upload.save`                                      | ✓    |               | 见[界面 · 朗读](ui.md#朗读)与[用户数据 · 保存资源文件](user-data.md#保存资源文件)                                           |
 | `sidebar`、`views`、`notifications`                            | ✓    |               | 跨平台的入口用 `navigation`                                                                                               |
 | `actions`                                                      | ✓    | 部分          | 手机只有卡片、文章、项目文档详情页的「更多」菜单，见[界面 · 对象动作](ui.md#对象动作)                                       |
 | `permissions`、`data`、`content`、`events`                     | ✓    | 部分          | 手机 0.2.13 起支持卡片、文章、项目、项目文档、待办、日程，见[用户数据](user-data.md)                                      |

@@ -599,6 +599,36 @@ const text = await session.result;
 - 「按住说话、上滑取消」这类手势由插件自己实现；`unavailableReason` 可以在按下前判断，给出提示。
 - 桌面上 `unavailableReason` 返回不可用原因，`start` 抛出以 `SPEECH_UNAVAILABLE` 开头的错误；同时支持两端的插件先判断再显示按钮。
 
+## 朗读
+
+插件可以把文字念出来，拿到音频字节，例如把文章改写成对话后逐句合成。目前只有桌面支持。用的是用户在 Tau「设置 › 语音」里选的语音服务与模型，费用计入该服务；插件不接触账号。在 manifest 的 `permissions` 里声明 `tts:synthesize`，第一次调用 `open` 时 Tau 询问用户。
+
+```ts
+const reason = context.tts.unavailableReason();
+if (reason) return toast.info(reason);
+const session = await context.tts.open({ signal });
+try {
+  const voices = await session.getVoices({ signal });
+  const { audio, mime } = await session.synthesize({ text: "你好", voiceId: voices[0].id }, { signal });
+} finally {
+  await session.close();
+}
+```
+
+| 接口                                          | 说明                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `unavailableReason()`                         | 当前不能朗读的原因（如还没有选语音服务），可以朗读时为 `null`；不会询问授权 |
+| `open({ signal })`                            | 打开一次会话，固定当时选的服务与模型                                    |
+| `session.providerName`                        | 服务的显示名                                                            |
+| `session.textInstructions`                    | 可选。服务对朗读文字的要求（如可用的停顿标签），可以写进给 AI 的提示词  |
+| `session.getVoices({ signal })`               | 可用音色，含用户克隆的音色                                              |
+| `session.synthesize({ text, voiceId, options })` | 合成一段，返回 `{ audio: Uint8Array, mime }`；`options` 可带 `speed`、`volume`、`pitch` |
+| `session.close()`                             | 用完关闭；插件停用时会自动关闭                                          |
+
+- 一次会话里连续合成多段，比每段都 `open` 快。用户在会话打开期间改了语音设置，已打开的会话仍用原来的服务。
+- 音色克隆不对插件开放，引导用户到「设置 › 语音」克隆后，克隆的音色会出现在 `getVoices` 里。
+- 宿主不支持时 `open` 抛出以 `TTS_UNAVAILABLE` 开头的错误。合成好的音频用[保存资源文件](user-data.md#保存资源文件)存进用户的笔记库。
+
 ## 通知
 
 ```ts

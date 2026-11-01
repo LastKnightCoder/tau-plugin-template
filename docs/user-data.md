@@ -29,6 +29,7 @@
 | `chats:read`                                          | 读取 AI 对话的信息，不含消息内容                     |
 | `flashcards:read`、`flashcards:write`                 | 闪卡，见[闪卡](flashcards.md)                        |
 | `ai:<能力名>`                                         | 使用 Tau 已配置的大模型，见 [AI](ai.md)              |
+| `speech:input`、`tts:synthesize`                      | 语音输入、朗读，见[界面](ui.md#语音输入)             |
 
 ### 用户如何授权
 
@@ -669,6 +670,23 @@ const open = await context.entities.count({
 - `cursor` 只能接着同一组条件和排序使用，换了条件要从第一页开始。
 - 写入时，声明过的字段的值必须是声明的类型或 `null`，否则抛错。类型不符的旧数据（例如声明之前写入的）在查询里按没有值处理。
 - `indexes` 是 `meta` 的顶层字段，最多 16 个。声明只在插件运行时生效，修改声明不需要迁移数据。
+
+### 保存资源文件
+
+插件生成的音频、图片等文件用 `context.upload.save` 存进用户的资源存储：用户选的是本地库就存进笔记库的资源目录，选了资源上传插件就上传到那里，与在正文里插入图片走同一条路径。不需要权限。
+
+```ts
+const url = await context.upload.save(
+  { name: "episode.mp3", mimeType: "audio/mpeg", content: bytes },
+  { signal }
+);
+await context.entities.update(id, { meta: { ...entity.meta, audioUrl: url } }, revision);
+```
+
+- 返回的地址可以写进插件内容的 `meta` 或正文，播放、显示时交给 `useResource` 或 `MediaAudio`、`MediaImage`，由 Tau 解析成可加载的地址。
+- 文件名由 Tau 改成不重名的名字，扩展名保留。
+- 删除插件内容不会删除已保存的文件。
+- 只有桌面支持，其他宿主抛出以 `UPLOAD_UNAVAILABLE` 开头的错误。
 
 ## 插件记录
 

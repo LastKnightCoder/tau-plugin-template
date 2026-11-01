@@ -144,6 +144,8 @@ create: () => ({
 | `settings`                                                   | 注册设置区域                                 | [界面](ui.md#设置)                             |
 | `notifications`                                              | 发送通知                                     | [界面](ui.md#通知)                             |
 | `speech`                                                     | 语音输入，拿到识别文字                       | [界面](ui.md#语音输入)                         |
+| `tts.open`                                                   | 用用户选的语音服务朗读文字                   | [界面](ui.md#朗读)                             |
+| `upload.save`                                                | 把文件存进用户的资源存储                     | [用户数据](user-data.md#保存资源文件)          |
 | `storage`                                                    | 插件私有存储                                 | [存储与网络](storage-and-network.md)           |
 | `fetch`                                                      | 网络请求                                     | [存储与网络](storage-and-network.md#网络请求)  |
 | `websocket`                                                  | WebSocket 连接                               | [存储与网络](storage-and-network.md#websocket) |
