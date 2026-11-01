@@ -35,7 +35,7 @@
 }
 ```
 
-`formatVersion`、`apiVersion`、`platform`、`format`、`main` 照抄上面的值。`minAppVersion` 是最低桌面版本，必填。这类插件只能安装在桌面上。
+`formatVersion`、`apiVersion`、`platform`、`format`、`main` 照抄上面的值。`minAppVersion` 必填，填你实际测试过的桌面 Tau 版本。这类插件只能安装在桌面上。
 
 | 字段                    | 说明                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -145,16 +145,15 @@ const os = await context.backend.call("system.platform", null, { signal });
 声明工具后，在后台中调用：
 
 ```ts
-const result = await ctx.process.run("git", ["status", "--short"], {
-  signal: request.signal,
-});
+// 写在 ctx.rpc.register 的处理函数 async (input, { signal }) => { ... } 中
+const result = await ctx.process.run("git", ["status", "--short"], { signal });
 // result.exitCode、result.stdout、result.stderr
 ```
 
 - 参数按数组原样传递，不经过 Shell，不需要也不能使用引号、管道等 Shell 语法。
 - 单次执行最长 30 秒，stdout 与 stderr 合计最多 512 KiB。
 - 在 Windows 上，`command` 必须能解析到唯一的 `.exe` 文件。
-- 需要取消时，把 RPC 请求的 `signal` 传给 `run`。
+- 需要取消时，把 RPC 处理函数收到的 `signal` 传给 `run`。
 
 ## 生命周期与清理
 
@@ -172,6 +171,6 @@ const result = await ctx.process.run("git", ["status", "--short"], {
 
 ## 发布
 
-后台和界面在同一个 ZIP 中，作为一个整体更新，不能只替换 `backend.js`。构建、安装和发布流程与普通插件相同，见[快速开始](getting-started.md)和[发布与更新](release.md)。
+后台和界面在同一个 ZIP 中，作为一个整体更新，不能只替换 `backend.js`。带后台的插件用 `pnpm install:local` 装进 Tau，见[快速开始 · 本地安装](getting-started.md#本地安装)；发布流程与普通插件相同，见[发布与更新](release.md)。
 
 插件的管理页面会显示后台的状态、错误、启动耗时和资源占用，便于用户和你排查问题。后台的 stdout、stderr 不会写入 Tau 的日志，需要诊断信息时通过 RPC 返回给界面。

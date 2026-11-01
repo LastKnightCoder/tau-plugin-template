@@ -1,19 +1,24 @@
 # 站点数据
 
-用户在 Tau 中发布博客时，Tau 会生成一组数据文件：站点信息、内容列表、每篇内容的正文和搜索索引。博客模板和独立站点读取这些数据来渲染页面。
+做[博客模板](blog-templates.md)时，页面上的文章、卡片、项目和搜索结果都来自这里的数据。用户在 Tau 中发布博客时，Tau 会生成一组数据文件（站点信息、内容列表、每篇内容的正文和搜索索引），和你的模板文件放在同一个站点里。
 
-- **开发博客模板**：推荐直接使用 `@tau/blog`（npm 包 `@xiongtao.xt/tau-blog`）。它包含数据读取、搜索、正文渲染，以及内容插件（如[编辑器扩展](editor.md)中的自定义块）的接入，用法见该包的 README。
-- **只想读取数据、自己渲染的站点**：使用 SDK 中的 `@tau/plugins/publish-client` 和 `@tau/plugins/publish-data`，见下文。
+- **用 `@tau/blog` 渲染**（推荐）：npm 包 `@xiongtao.xt/tau-blog`，包含数据读取、搜索、正文渲染，以及插件提供的[编辑器块](editor.md)的显示，用法见该包的 README。
+- **自己渲染**：使用 SDK 中的 `@tau/plugins/publish-client` 和 `@tau/plugins/publish-data`，见下文。
 
-要把生成的站点文件送到远端，写的是[博客发布提供方](providers/publish.md)。
+模板怎么打包、怎么拿到清单地址，见[博客模板](blog-templates.md)。要把生成的站点文件送到远端，写的是[博客发布提供方](providers/publish.md)。
 
 ## 读取数据
 
 ```ts
 import { createClient } from "@tau/plugins/publish-client";
 
+// 入口 HTML 里写 <meta name="tau-manifest" content="__TAU_MANIFEST__" />，发布时 Tau 换成清单地址
+const manifestPath = document.querySelector<HTMLMetaElement>(
+  'meta[name="tau-manifest"]',
+)?.content;
+if (!manifestPath) throw new Error("缺少数据清单");
 const client = createClient({
-  manifestUrl: "https://example.com/data/site.<摘要>.json",
+  manifestUrl: new URL(manifestPath, document.baseURI).href,
 });
 const manifest = await client.readManifest();
 
@@ -34,18 +39,30 @@ if (item) {
 
 - `site`：站点信息，见下文。
 - 全部内容的 `key` 及对应的数据文件、搜索索引的引用。
-- 只出现一次的站点级数据：`settings`（发布外观设置）、`collections`（项目列表）、`cardTagTree`（卡片标签树）、`projectTrees`（按项目 ID 组织的文档目录）。
+- 只出现一次的站点级数据：`settings`（[发布外观](#发布外观)）、`collections`（项目列表）、`cardTagTree`（卡片标签树）、`projectTrees`（按项目 ID 组织的文档目录）。
 
 `readData` 返回内容时会一并带上 `settings`。
+
+### 发布外观
+
+`settings.appearance` 是用户在 Tau 里设置的正文外观，发布的博客要和用户在 Tau 里看到的一致：
+
+| 字段                 | 说明                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image.borderRadius` | 正文图片的圆角                                                                                                                              |
+| `image.shadow`       | 正文图片的阴影                                                                                                                              |
+| `highlight.style`    | 背景高亮的笔触，对应「设置 › 外观 › 高亮」：`flat`（平涂）、`chisel`（平头荧光笔）、`swipe`（下半划线）、`grain`（干笔颗粒），缺省为 `flat` |
+
+- 用 `@tau/blog` 的 `ContentRenderer` 时，它从内容数据的 `settings` 读取这些值，图片外观和高亮笔触都会自动生效，模板不需要处理。
+- 自己渲染正文时，带背景高亮的文本节点有 `highlight` 字段（颜色名，如 `"yellow"`）。`style` 为 `flat` 时铺满背景色；其他值画成马克笔的样子，例如用 SVG 或渐变背景画出笔头和笔触。不认识的值按 `flat` 处理。
 
 ### 站点信息与模板字段
 
 `site` 包含 Tau 提供的 `title`、`basePath`，以及可选的 `publicUrl`、`favicon`。
 
-站点的其他配置（描述、副标题、布局开关等）由**博客模板**自己声明：在模板的 manifest 中写 `template.siteFields`，用户在「站点设置 · 博客模板」中填写，发布时以 `site.fields[key]` 交给模板。
+站点的其他配置（描述、副标题、布局开关等）由模板自己声明，写法见[博客模板 · 站点字段](blog-templates.md#站点字段)。用户填写的值在 `site.fields[key]` 中：
 
-- 字段类型有 `text`、`textarea`、`url`、`select`、`switch`。
-- `fields` 只包含已声明的字段。用户没填时取字段的 `default`；没有默认值时，文本类为空字符串，开关为 `false`，下拉为第一个选项。
+- `fields` 只包含已声明的字段，用户没填的字段已经换成默认值，模板直接使用即可。
 - 首页数据只有时间线和统计，介绍区等由模板根据自己的字段渲染。
 
 ### 内容文件
@@ -88,3 +105,7 @@ if (item) {
 `@tau/plugins` 的根入口在普通浏览器或 Node.js 中执行会直接报错，这是有意的：它的实现只存在于 Tau 中。
 
 独立站点用自己的构建工具，不要复用插件模板的 `build.mjs` 和本地安装脚本，它们是为运行在 Tau 中的插件准备的。
+
+## 下一步
+
+读[博客模板](blog-templates.md)，把页面打包成用户可以在 Tau 里选择的模板。

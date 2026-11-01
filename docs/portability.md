@@ -52,8 +52,8 @@
 | `services`                                                     | ✓    |               |                                                                                                                           |
 | 白板扩展（`whiteboardExtensions`）                             | ✓    |               |                                                                                                                           |
 | `backend`（本机后台）                                          | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                                                                                |
-| 随插件附带的 Skill                                             | ✓    | 部分          | 手机上 AI 能读说明和参考资料，不执行脚本，见[Skill](skills.md)                                                            |
-| 独立 Skill 包                                                  | ✓    | ✓             | 见[Skill · 独立的 Skill 包](skills.md#独立的-skill-包)                                                                    |
+| 随插件附带的 Skill                                             | ✓    | ✓             | 只能附带 Markdown，不能带脚本；手机上 AI 同样能读，见[Skill](skills.md)                                                   |
+| 独立 Skill 包                                                  | ✓    | ✓             | 可以带脚本，脚本只在桌面执行，手机上 AI 只读说明，见[Skill · 独立的 Skill 包](skills.md#独立的-skill-包)                  |
 
 类型里能导入，不代表这个平台能用。以上表为准，不确定时在真机上试。
 
