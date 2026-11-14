@@ -91,7 +91,7 @@ export function RecentCardsPage({ context }: PluginPageProps) {
 | `speech:input`、`tts:synthesize`                      | 语音输入、朗读，见[通知、语音输入与朗读](notifications-and-voice.md#语音输入) |
 
 - 声明的权限必须是上表中的值，写错时构建会报错。SDK 导出了全部权限 ID 的列表 `PLUGIN_PERMISSIONS` 和判断函数 `isPluginPermission`，插件需要把权限 ID 存进自己的数据或从配置里读出时，用它校验。
-- 手机上能申请的权限更少，声明了 `android` 或 `ios` 时申请了手机不支持的权限，构建和插件中心都会拒绝，见[多端适配](portability.md#各平台可用的接口)。
+- 手机上能申请的权限更少，声明了 `android` 或 `ios` 的插件如果申请了手机不支持的权限，构建和插件中心都会拒绝，见[多端适配](portability.md#各平台可用的接口)。
 - 只申请功能确实需要的权限。
 
 ## 用户如何授权

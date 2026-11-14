@@ -101,7 +101,7 @@ node -e 'const m=require("./manifest.json"),f=`${m.id}-${m.version}.zip`,b=requi
 
 ### 本地安装
 
-`pnpm install:local` 把构建好的 ZIP 直接解压到本机的插件目录 `~/.editor/plugins/<插件ID>/`，再在 Tau 插件页的「⋯」里点「重新扫描」就能看到它。它不经过插件中心，所以正式版桌面 Tau 也能用，但只接受**只能装在桌面、manifest 里没有 `targets` 的包**：
+`pnpm install:local` 把构建好的 ZIP 直接解压到本机的插件目录 `~/.editor/plugins/<插件ID>/`，再在 Tau 插件页的「⋯」里点「重新扫描」就能看到它。它不经过插件中心，所以正式版桌面 Tau 也能用，但只接受**manifest 里没有 `targets` 声明、只装在桌面**的两类包：
 
 - [本机后台](backend.md)插件：它的 manifest 不写 `targets`，用顶层的 `minAppVersion`。
 - 只写 `"platform": "desktop"` 和顶层 `minAppVersion` 的[独立 Skill 包](skills.md#独立的-skill-包)。

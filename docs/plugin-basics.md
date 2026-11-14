@@ -37,7 +37,7 @@
 | `version`     | 插件版本，格式为 `主版本.次版本.修订号`，可带预发布后缀，如 `1.2.0-beta.1`                      |
 | `targets`     | 支持的平台（`desktop`、`android`、`ios`）和各平台的最低客户端版本，见[多端适配](portability.md) |
 | `categories`  | 插件中心的分类，可多选，也可以不写，见下表                                                      |
-| `keywords`    | 插件中心的搜索词，用于搜索的文本。例如 S3 插件可以写 `MinIO`、`R2`                              |
+| `keywords`    | 插件中心的搜索关键词。例如 S3 插件可以写 `MinIO`、`R2`                                          |
 | `permissions` | 插件可能申请的用户数据、AI、语音输入权限，见[权限](permissions.md)和 [AI](ai.md)                |
 | `backend`     | 需要本机后台时填写，这类插件的 manifest 写法不同，见[本机后台](backend.md)                      |
 
