@@ -14,9 +14,7 @@ function HelloPage({ context }: PluginPageProps) {
   return (
     <section>
       <h1>你好，Tau</h1>
-      <Button onClick={() => context.storage.set("visited", true)}>
-        记住我来过
-      </Button>
+      <Button onClick={() => context.storage.set("visited", true)}>记住我来过</Button>
     </section>
   );
 }
@@ -48,19 +46,20 @@ export default definePlugin({
 
 ### 做界面
 
-| 想做的事                                         | 读这篇                                                                 |
-| ------------------------------------------------ | ---------------------------------------------------------------------- |
-| 先看插件的界面能出现在 Tau 的哪些位置            | [界面概览](ui.md)                                                      |
-| 用 `@tau/ui` 组件、写样式、用 Tailwind           | [界面组件与样式](ui-components.md)                                     |
-| 加一个页面，以及打开它的功能入口、桌面侧边栏条目 | [页面与入口](pages.md)                                                 |
-| 在插件详情里放设置项，或在桌面命令面板里加命令   | [设置与命令](settings-and-commands.md)                                 |
-| 在首页放一块面板                                 | [挂到 Tau 的界面里 · 首页面板](app-surfaces.md#首页面板)               |
-| 在卡片、文章、项目文档的「⋯」菜单里加一项操作    | [挂到 Tau 的界面里 · 对象动作](app-surfaces.md#对象动作)               |
-| 在卡片、文章、项目文档的详情里放一块内容         | [挂到 Tau 的界面里 · 详情区块](app-surfaces.md#详情区块)               |
-| 在 Notebook 的「生成」菜单里加一种产物           | [挂到 Tau 的界面里 · Notebook 输出](app-surfaces.md#notebook-输出)     |
-| 发送通知                                         | [通知、语音输入与朗读 · 通知](notifications-and-voice.md#通知)         |
-| 让用户按住说话，插件拿到识别出的文字             | [通知、语音输入与朗读 · 语音输入](notifications-and-voice.md#语音输入) |
-| 用用户选的语音服务把文字念出来                   | [通知、语音输入与朗读 · 朗读](notifications-and-voice.md#朗读)         |
+| 想做的事                                           | 读这篇                                                                 |
+| -------------------------------------------------- | ---------------------------------------------------------------------- |
+| 先看插件的界面能出现在 Tau 的哪些位置              | [界面概览](ui.md)                                                      |
+| 用 `@tau/ui` 组件、写样式、用 Tailwind             | [界面组件与样式](ui-components.md)                                     |
+| 加一个页面，以及打开它的功能入口、桌面侧边栏条目   | [页面与入口](pages.md)                                                 |
+| 打开桌面小窗或全屏窗口，和主窗口同步状态或发送消息 | [桌面插件窗口](windows.md)                                             |
+| 在插件详情里放设置项，或在桌面命令面板里加命令     | [设置与命令](settings-and-commands.md)                                 |
+| 在首页放一块面板                                   | [挂到 Tau 的界面里 · 首页面板](app-surfaces.md#首页面板)               |
+| 在卡片、文章、项目文档的「⋯」菜单里加一项操作      | [挂到 Tau 的界面里 · 对象动作](app-surfaces.md#对象动作)               |
+| 在卡片、文章、项目文档的详情里放一块内容           | [挂到 Tau 的界面里 · 详情区块](app-surfaces.md#详情区块)               |
+| 在 Notebook 的「生成」菜单里加一种产物             | [挂到 Tau 的界面里 · Notebook 输出](app-surfaces.md#notebook-输出)     |
+| 发送通知                                           | [通知、语音输入与朗读 · 通知](notifications-and-voice.md#通知)         |
+| 让用户按住说话，插件拿到识别出的文字               | [通知、语音输入与朗读 · 语音输入](notifications-and-voice.md#语音输入) |
+| 用用户选的语音服务把文字念出来                     | [通知、语音输入与朗读 · 朗读](notifications-and-voice.md#朗读)         |
 
 ### 存数据、读写用户的内容
 
