@@ -63,6 +63,7 @@ context.notifications.send({
     {
       label: "查看",
       primary: true,
+      reveal: true,
       onClick: async () => {
         await report.open();
       },
@@ -76,9 +77,10 @@ context.notifications.send({
 | `label`        | 按钮文字，最多 100 字                                     |
 | `onClick`      | 点击时执行，可以是异步的；执行期间按钮显示加载状态        |
 | `primary`      | 可选。是否为主按钮                                        |
+| `reveal`       | 可选。正文也可触发的查看动作，每条通知至多一个            |
 | `resolvedText` | 可选。`onClick` 成功后在通知里显示的结果文字，最多 500 字 |
 
-`onClick` 失败时，错误显示在通知里。插件停用后，旧通知上的按钮不再可用。
+Tau 桌面端 0.64.1 起支持 `reveal`。独立通知窗口中的查看动作会先唤起 Tau，再执行回调。`onClick` 失败时，错误显示在通知里。插件停用后，旧通知上的按钮不再可用。
 
 ### 撤销通知
 
