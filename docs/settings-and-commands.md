@@ -152,6 +152,9 @@ function ProfileSettings({ context, saved }: PluginSettingsProps & { saved: Prof
 
 ## 命令
 
+要把插件页面作为一条右栏命令，在 `run` 中调用 `await page.open({}, { placement: "dock" })` 并返回 `null`。注册和调用的完整示例见[在右栏打开页面和网页](pages.md#在右栏打开页面和网页)。
+
+
 命令是一个有名字的操作，开头例子里的「重置计数」就是一条命令：
 
 | 字段    | 说明                                                                |

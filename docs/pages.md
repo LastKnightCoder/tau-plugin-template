@@ -39,11 +39,12 @@ export default definePlugin({
 | ----------- | -------------------------------------------------------------------------- |
 | `id`        | 局部 ID，见 [ID 规则](plugin-basics.md#id-规则)                            |
 | `title`     | 页面标题                                                                   |
-| `component` | React 组件，收到 `context`、`params`、`pageContext` 三个属性               |
+| `component` | React 组件，收到 `context`、`params`、`pageContext` 和 `placement`               |
+| `dockable`  | 可选。设为 `true` 后，桌面主窗口支持在右栏打开此页                         |
 | `match`     | 可选。默认 `"single"`，页面只有一个实例；`"params"` 表示按参数区分多个实例 |
 | `getId`     | 可选。`match: "params"` 时，用它从参数算出实例身份；默认按全部参数区分     |
 
-`register` 返回页面句柄，提供 `open(params?)` 和 `dispose()`。在命令、按钮或其他页面里用 `shelf.open()` 打开页面，不要自己操作浏览器地址或历史记录。
+`register` 返回页面句柄，提供 `open(params?, options?)` 和 `dispose()`。在命令、按钮或其他页面里用 `shelf.open()` 打开页面，不要自己操作浏览器地址或历史记录。
 
 只是从别的页面打开的详情页可以不注册入口；用户要能直接找到的页面，注册一个[功能入口](#功能入口)。
 
@@ -189,6 +190,74 @@ function BookPage({ pageContext }: PluginPageProps) {
 - 用户按 Esc 时，Tau 先关最后登记的浮层，再依次往前；没有浮层时 Esc 不做任何事，不会后退页面。
 - 只在页面显示时生效：页面切走后，它登记的浮层不会响应 Esc；回来后自动恢复。插件停用时全部清除。
 - `@tau/ui` 的模态 `Dialog`、`Drawer` 和 `Popover`、`Select`、`Menu` 已经自己处理 Esc，不需要登记。
+
+## 在右栏打开页面和网页
+
+要让用户边看正文边用插件，在页面定义里加 `dockable: true`。用户点击按钮、菜单或执行命令时，调用自己登记的页面句柄。下面的桌面插件提供一条「在右栏打开资料来源」命令；把示例放进模板的 `src/index.tsx`，构建并启用后，按 ⌘K（Windows / Linux 用 Ctrl+K）搜索这条命令。
+
+```tsx
+import { useState } from "react";
+import { definePlugin, type PluginPageProps } from "@tau/plugins";
+import { Button } from "@tau/ui";
+
+declare const __PLUGIN_META__: { id: string; name: string; version: string };
+
+function Sources({ context, placement }: PluginPageProps) {
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
+  async function viewSource() {
+    try {
+      setError("");
+      await context.app.openWeb(url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "无法打开网页");
+    }
+  }
+  return (
+    <section>
+      {placement === "page" && <h1>资料来源</h1>}
+      <label>
+        来源网址
+        <input type="url" value={url} onChange={e => setUrl(e.target.value)} />
+      </label>
+      <Button disabled={!url} onClick={viewSource}>
+        查看来源
+      </Button>
+      {error && <p role="alert">{error}</p>}
+    </section>
+  );
+}
+
+export default definePlugin({
+  ...__PLUGIN_META__,
+  create: () => ({
+    activate(ctx) {
+      const sources = ctx.pages.register({
+        id: "sources",
+        title: "资料来源",
+        component: Sources,
+        dockable: true,
+      });
+      ctx.commands.register({
+        id: "open-sources",
+        title: "在右栏打开资料来源",
+        async run() {
+          await sources.open({}, { placement: "dock" });
+          return null;
+        },
+      });
+    },
+  }),
+});
+```
+
+输入完整网址，点击「查看来源」，网页会暂时盖住插件。点网页栏左上角的「资料来源」回到刚才的输入框。右上角可以放大、收回或关闭；放大往返时组件保留状态。
+
+- `sources.open()` 和 `sources.open(params)` 仍打开完整页。已有参数放在第一项，例如 `sources.open({ sourceId: 12 }, { placement: "dock" })`。同一右栏实例接收新参数，身份由 `match` 与 `getId` 决定。完整页与右栏各有自己的组件状态。
+- 组件收到的 `placement` 为 `"page"` 或 `"dock"`。放大右栏时它仍是 `"dock"`。页面自己的浮层和未保存修改继续通过 `pageContext.registerDismiss` 与 `registerLeaveGuard` 登记。被网页盖住时页面暂停 effect，返回时恢复。右栏登记的上下文只属于右栏，AI 查询当前页仍读取正文页。
+- 只需打开网址时，直接在点击回调里调用 `await ctx.app.openWeb(url)`，无需注册页面或申请数据权限。只接受绝对 HTTP(S) 地址。Promise 在宿主接受打开请求后完成，后续网络错误由网页栏显示。未保存修改阻止切换、网址不合法、句柄已注销或宿主不支持时，调用会拒绝。
+- 停靠和打开网页都需要桌面主窗口里的用户操作。移动端使用 `sources.open()` 打开完整页。依赖桌面右栏的插件在 manifest 的 `targets.desktop.minAppVersion` 填写实际验证过且包含此能力的客户端版本。
+
 
 ## 功能入口
 
