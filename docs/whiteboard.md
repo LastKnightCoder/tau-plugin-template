@@ -262,7 +262,7 @@ panel: ({ run }) => (
 
 - 每块画布的状态放在 `create` 的闭包里，不要放在模块顶层，否则会在多块画布之间共享。
 - `elements` 必须写在扩展顶层，不能放进 `create` 的返回值。
-- `mod+k`、`mod+p`、`mod+j`、Alt+方向键和 Esc 由 Tau 保留，不能声明。
+- `mod+k`、`mod+p`、`mod+j`、`mod+shift+j`、Alt+方向键和 Esc 由 Tau 保留，不能声明。
 
 ### 修改画布
 
