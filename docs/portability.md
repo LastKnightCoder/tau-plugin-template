@@ -39,6 +39,7 @@
 | `speech`                                                       |      | ✓             | 见[通知、语音输入与朗读 · 语音输入](notifications-and-voice.md#语音输入)                                                  |
 | `tts.open`                                                     | ✓    |               | 见[通知、语音输入与朗读 · 朗读](notifications-and-voice.md#朗读)                                                          |
 | `upload.save`                                                  | ✓    |               | 见[插件内容与记录 · 保存资源文件](plugin-content.md#保存资源文件)                                                         |
+| 正文文字装饰（`textDecorations`） | ✓ | | 桌面主窗口可以标记词语、选择目标并悬停预览，见[编辑器交互](editor-interactions.md#在正文中标出文字) |
 | 编辑器块（`editorExtensions`、`editorCodecs`）                 | ✓    | ✓             | 见[编辑器块](#编辑器块)                                                                                                   |
 | `sync`、`upload`、`tts`、`asr`、`images` 提供方                | ✓    | ✓             | 见[服务提供方](#服务提供方)                                                                                               |
 | `embeddings`、`video`、`publish` 提供方                        | ✓    |               |                                                                                                                           |

@@ -248,6 +248,61 @@ export default definePlugin({
 
 `editor` 上的 `string`、`removeNodes`、`insertNodes`、`setNodes` 等方法直接可用，不需要另外安装或打包编辑器库。
 
+## 在正文中标出文字
+
+桌面主窗口提供 `context.textDecorations`。在插件的 `activate(context)` 中注册，旧版或其他宿主可用可选链判断支持情况。下面的示例把文章里的「回顾」标出来，点击后打开最近更新的一篇带「复盘」标签的文章。先在 manifest 的 `permissions` 声明 `articles:read`。
+
+```ts
+if (!context.textDecorations) return;
+const { items } = await context.data.articles.query({ tag: "复盘", limit: 1 });
+const target = items[0];
+if (!target) return;
+
+const marks = await context.textDecorations.register({
+  sources: ["article"],
+  getDecorations({ text, source }) {
+    if (source.id === target.id) return [];
+    return Array.from(text.matchAll(/回顾/g), hit => ({
+      start: hit.index, end: hit.index + hit[0].length,
+      appearance: "reference" as const, key: target.id, label: `打开文章《${target.title}》`,
+    }));
+  },
+  getPreview({ key }) {
+    return { ref: { kind: "article", id: key } };
+  },
+  async onActivate({ key }) {
+    await context.app.open({ kind: "article", id: key });
+  },
+});
+```
+
+在 `sources` 里选择卡片（`card`）、文章（`article`）、项目文档（`document`），并声明各来源的读取权限。每个返回项用 `appearance` 选择外观，按打扰程度从低到高：
+
+| 外观 | 样子 | 适合 |
+| --- | --- | --- |
+| `dot` | 文字不变，末尾一个小圆点 | 极简、行距紧 |
+| `ghost` | 点线很淡，悬停或按住 ⌘/Ctrl 才显出 | 识别量很大、不想打扰阅读 |
+| `reference` | 正文色文字加点线，悬停变成实线 | 引用、跳转，推荐默认 |
+| `tint` | 只改字色 | 表格、密集文本 |
+| `marker` | 文字下沿的荧光笔底色，悬停铺满 | 想一眼扫出结果 |
+| `wavy` | 波浪下划线 | 提醒、待确认 |
+
+`dot`、`ghost`、`reference` 表示可以点击，必须提供字符串 `key` 和 `onActivate`，否则不显示。其余外观省略 `key` 即可只用于阅读。外观都用背景或伪元素绘制，用户自己加的下划线、删除线保持不变（`wavy` 除外）。
+
+`tone` 选择颜色：`accent`（默认，跟随主题强调色）、`info`、`warn`、`muted`。颜色取自当前主题，深浅模式自动适配，不能传自定义颜色。`label` 是悬停约 0.4 秒后出现的提示，Tau 会在后面附上插件名。
+
+可选的 `getPreview({ key, source, choice }, signal)` 在指针停留约 450 毫秒后调用，可以同步或异步返回 `{ ref: { kind, id }, at?: { block } }`。其中 `kind` 支持 `card`、`article` 和 `document`。Tau 校验目标读取权限并显示与内容引用相同的只读预览卡；提供 `at` 时从该顶层块开始预览，「打开」也会定位到它。插件需要预先声明并获得目标类型的读取权限。
+
+单一目标可直接返回。命中多个目标时，首次悬停返回 `undefined`，使用 `label` 提示；用户点击打开候选菜单，再悬停某一项时，`choice` 是该项的 key。离开、切换目标、注销或内容失效会取消旧请求。悬停与点击分别处理，预览不会执行 `onActivate`。
+
+`onActivate` 返回候选数组 `[{ key, title, description? }]` 时，Tau 在文字旁弹出菜单。用户选中后再次调用 `onActivate`，并在 `choice` 中传入选中的 `key`。处理中文字会变淡，抛出的错误以提示条显示。
+
+`getDecorations({ source, blockType, text }, signal)` 可以返回范围数组或 Promise。偏移按 JavaScript 字符串下标计算，包含起点、排除终点。同一块内相邻的普通文字与粗体连续传入，链接、行内代码、嵌套块等会切断文本。请自行消解本次结果中的重叠；同一批存在重叠时，这个提供方的该批结果会被忽略。不同插件发生冲突时优先起点较前的范围，同起点按注册顺序。
+
+主窗口按需计算靠近视口的正文并在编辑停顿后更新，移动光标和普通重绘复用结果。可以直接返回与当前来源、正文和配置一致的预计算结果，或在 Worker 中匹配并响应取消信号。文字变化、资料库切换和插件停用会使旧请求失效。
+
+插件的匹配规则、词表或外观设置变化时，调用 `marks.invalidate()`；只影响一篇时调用 `marks.invalidate({ source })`。主动移除这组装饰用 `marks.dispose()`。
+
 ## 下一步
 
 - [源码块与媒体块](editor-source-media.md)：做「源码 + 预览」的块，或在块里显示图片、视频、音频。
