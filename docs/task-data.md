@@ -35,10 +35,61 @@ async function loadTargets(context: PluginContext) {
 | --- | --- |
 | `id`、`revision`、`title` | 身份、版本和名称 |
 | `archived` | 是否归档 |
-| `writable`、`readonlyReason?` | 能否写入；不能写时给出原因 |
-| `color`、`visible` | 只有日历提供：颜色和显示状态 |
+| `writable`、`readonlyReason?` | 能否向其中写入待办或日程；不能写时给出原因 |
+| `editable?`、`editReadonlyReason?` | 能否修改目录本身；未提供时不能据 writable 推断 |
+| `color` | 颜色；待办项目没有颜色时为 null |
+| 日历 `visible` | 是否在日历中显示 |
 
-选择写入位置时检查 writable。日历 visible 只表示是否显示，不表示能否写入。插件能选择已有目录，不能通过这些接口新建、改名或删除目录。
+选择内容写入位置时检查 writable，修改目录名称等信息时检查 editable。日历 visible 只表示是否显示。系统目录不可修改；归档用户目录可以改名，但仍不能向其中写入内容。
+
+## 创建和修改待办项目、日历
+
+需要为评审准备独立的项目和日历时，可以创建普通用户目录：
+
+```ts
+import type { PluginContext } from "@tau/plugins";
+
+async function createReviewTargets(context: PluginContext, requestId: string) {
+  const list = await context.data.todoLists.create({
+    title: "评审准备", color: "blue",
+  }, { requestId: `${requestId}:list` });
+  const calendar = await context.data.calendars.create({
+    title: "评审安排", color: "blue", visible: true,
+  }, { requestId: `${requestId}:calendar` });
+  return { list, calendar };
+}
+```
+
+调用前保存 requestId，重试复用；两次创建各自提交，第一次成功、第二次失败时也能继续。将返回 ID 与外部目录的稳定身份保存到 context.records，再用 listId/calendarId 创建待办和日程。名称可以重复，不按同名自动认领或合并用户目录。
+
+| 方法 | 字段 | 权限 |
+| --- | --- | --- |
+| `todoLists.create(input, options?)` | 必填 title，可选 color | todos:write |
+| `todoLists.update(id, patch, options)` | title、color | todos:write |
+| `calendars.create(input, options?)` | 必填 title，可选 color、visible | calendar:write |
+| `calendars.update(id, patch, options)` | title、color、visible | calendar:write |
+
+颜色使用 PluginDirectoryColor 中的色板标识，例如 blue、red、green；外部服务的颜色由插件转换。待办项目 color:null 清除颜色；日历省略颜色使用默认色，不能设 null。日历默认显示。空名称、控制字符、空修改和未开放字段会被拒绝，不会截断名称。
+
+改名先读取当前目录，传回刚取得的版本：
+
+```ts
+import type { PluginContext } from "@tau/plugins";
+
+async function renameReviewCalendar(context: PluginContext, id: string, title: string) {
+  const calendar = await context.data.calendars.get(id);
+  if (!calendar) throw new Error("日历已不存在，请重新选择");
+  if (calendar.editable !== true) throw new Error("此日历不能修改");
+  return context.data.calendars.update(id, { title }, {
+    expectedRevision: calendar.revision,
+  });
+}
+```
+
+待办项目使用相同的 get/update 方式。改名保持 ID、原待办和日程的归属，不会修改未指定的颜色、显示或其他目录信息。版本冲突抛出 PluginConflictError，由插件重新读取并决定如何处理；不能因为改名失败就另建同名目录。
+
+创建防重与[创建待办](#创建带提醒的待办)相同：相同请求与输入返回原目录当前状态，删除后旧请求不重建。接口不提供目录删除、归档、合并、分组和排序操作。
+
 
 ## 读取待办与日程
 
@@ -333,6 +384,6 @@ async function consumeTaskChanges(
 - 发生冲突或外部调用失败时，不推进游标。映射与处理结果适合存入 records，保存方式见[插件记录](plugin-content.md#插件记录)。
 - 示例不根据「本轮没出现」删除已有对象。需要缺失对账时，把本轮出现的身份集合也一起保存，等全量和补查成功结束再比较；恢复半轮游标时也要恢复这份集合。
 - 换资料库、换设备、授权或查询范围变化、历史过期、游标损坏会抛 PluginSyncResetRequiredError。保留映射，丢弃游标，再完整读取；protocol-changed 需要先核对客户端支持，见[多端适配](portability.md#待办与日程接口)。
-- 在插件启动、恢复前台以及收到 todos.changed / calendar.changed 时续读。事件用来唤醒读取，不承担离线历史；它们也不保证每次变化只通知一次。
+- 在插件启动、恢复前台以及收到 todo.* / event.* / todo-list.* / calendar.* 的对象事件时续读。订阅时列出完整事件名，例如 todo-list.updated；每条通知带对应 get 使用的 ID。事件用来唤醒读取，不承担离线历史，也不保证每次变化只通知一次。订阅方式见[订阅变化](user-data.md#订阅变化)。
 
 日程备注和正文待办的编辑保存后会进入变化流；读取不会强行停止打开中的编辑器。外部冲突策略、无法表达的重复或时区数据以及多设备执行协调，由插件明确处理，不能把不支持的数据静默展开后宣称可无损回写。

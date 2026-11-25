@@ -210,10 +210,17 @@ try {
 回顾页面开着时，用户在别处改了卡片或待办，页面应该跟着刷新：
 
 ```ts
-context.events.on(["card.created", "card.updated", "card.deleted", "todos.changed"], () => {
-  void loadWeek().then(render);
-});
+import type { PluginContext } from "@tau/plugins";
+
+function watchReviewLists(context: PluginContext, refresh: (id: string) => void) {
+  return context.events.on(
+    ["todo-list.created", "todo-list.updated", "todo-list.deleted"],
+    event => refresh(event.id),
+  );
+}
 ```
+
+所有业务对象使用同一套 created / updated / deleted 事件，回调带稳定字符串 id，与相应 get 使用的 ID 一致。 type 区分对象和动作，at 是通知送出时间，不能作为修改版本；名称、颜色等当前值通过 get 读取。订阅时写完整事件名，不传 `*`。返回句柄的 dispose() 可取消订阅。
 
 | 事件                                           | 说明                                                                         |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -224,14 +231,19 @@ context.events.on(["card.created", "card.updated", "card.deleted", "todos.change
 | `material.*`、`chat.*`                         | 同上。划线删除算 `deleted`；对话收到新消息也算 `updated`                     |
 | `entity.*`                                     | 本插件的内容，带 `id` 和 `kind`，见[插件内容](plugin-content.md#插件内容)    |
 | `record.*`                                     | 本插件的记录，带 `id` 和 `collection`，见[插件记录](plugin-content.md#插件记录) |
-| `todos.changed`、`calendar.changed`            | 待办、日程有变化，不带 `id`，需要时重新查询                                  |
+| `todo.*` | 待办变化，带 todos.get 使用的 ID；重复任务实例变化通知系列根对象 |
+| `event.*` | 真实日程变化，带 calendar.get 使用的 ID，不展开虚拟任务标记 |
+| `todo-list.*` | 待办项目创建、改名、颜色或其他元数据变化，带 todoLists.get 使用的 ID |
+| `calendar.*` | 日历目录变化，带 calendars.get 使用的 ID |
 | `workspace.reset`                              | 资料库被整个替换（例如从云端恢复），应全部重新读取                           |
 
-- 事件只说明哪一项变了，不携带数据，需要时用 `context.data` 重新读取。
-- `origin` 表示变化的来源：`{ kind: "plugin", pluginId }` 表示由插件写入，可以用它忽略自己写入引起的事件；其他情况是 `{ kind: "app" }`。待办与日程的事件总是 `app`。
-- 同一项在短时间内的多次变化会合并成一次；用户持续输入时，最多每 2 秒一次。
+- 事件在提交后送出，回滚的修改不送出。通知只说明哪一项变了，不携带完整数据或旧值，需要时用 `context.data` 重新读取；读取时可能已有更新、恢复或权限变化。
+- `origin` 表示变化的来源：`{ kind: "plugin", pluginId }` 表示由插件写入，可以用它忽略自己写入引起的事件；其他情况是 `{ kind: "app" }`。待办、日程及两类目录事件不提供精确写入方，总是 `app`，应比较已处理状态避免循环。
+- 通知可能延迟、合并或重复；批量变化仍保留各个对象身份，不是逐次操作审计。workspace.reset 是资料库级例外，不携带对象 ID；它也用于提示事件历史已经不足。
+- 事件不承担离线历史。需要可靠同步时，启动、恢复前台和收到通知后使用[按游标读取变化](task-data.md#按游标读取变化)补读；这是数据查询接口，订阅仍只使用 context.events.on。
 - 接收事件需要对应的读取权限（`entity.*`、`record.*` 与 `workspace.reset` 除外）。还没获得授权时事件不会送达，也不会因此弹窗。
 - `entity.created`、`entity.updated`、`entity.deleted` 只发给创建这项内容的插件，不需要权限。正文修改也算 `updated`；`kind` 是内容类型，删除后 `get` 读不到时可以据此判断是哪类内容。从「最近删除」恢复、卸载后重新安装找回，都算 `created`。适合在其他设备同步过来或 AI 通过 MCP 写入后刷新页面。
+- 同一订阅按顺序处理回调，可以使用异步函数；回调失败不会阻断后续通知。耗时同步适合由回调唤醒自己的任务队列。
 - 订阅在插件停用时自动注销。
 
 要读改正文或在页面里嵌入编辑器，接着读[正文](document-body.md)。
