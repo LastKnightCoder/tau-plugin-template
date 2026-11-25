@@ -139,25 +139,16 @@ const chats = await context.data.chats.query({ updatedAfter: weekAgo });
 
 ### 待办与日程
 
+`context.data.todos` 读取普通待办、重复系列和正文里的勾选项，`context.data.calendar` 读取日程。两者都提供 get 和分页 query；目录、提醒、重复规则、实例状态及备注的完整用法见[待办与日程](task-data.md)。
+
 ```ts
 const todos = await context.data.todos.query({ completed: false, limit: 20 });
-const events = await context.data.calendar.query({ start: "2026-10-19", end: "2026-10-26" });
+const events = await context.data.calendar.query({ start: "2026-12-01", end: "2026-12-07" });
 ```
 
-`todos.query` 的参数：
+### 按游标读取变化
 
-| 参数              | 说明                                                                                            |
-| ----------------- | ----------------------------------------------------------------------------------------------- |
-| `view`            | `tasks`（默认）返回待办与周期系列；`occurrences` 返回周期待办的每一次，必须同时给 `start`、`end` |
-| `source`          | `all`（默认）、`todo`（独立的待办）、`document`（正文里的勾选项）                               |
-| `completed`       | 按完成状态筛选                                                                                  |
-| `keyword`         | 按关键词筛选                                                                                    |
-| `start`、`end`    | 按截止日期筛选，格式 `YYYY-MM-DD`                                                               |
-| `limit`、`cursor` | 分页，每页最多 100 条，默认 50                                                                  |
-
-- 来自正文勾选项的待办带有 `source`，指明它在哪篇卡片、文章、项目文档或日记里。用户在 Tau 里把勾选项排除出待办、或提升为独立待办后，它不再作为正文待办返回；对正文待办的修改会回到原文的那一行，不会另建一条独立待办。
-- 周期待办用 `view: "occurrences"` 查询时，返回的每一项是某一天的那一次，`id` 固定对应那一天，改期后也不变，不要解析或自己拼接它。对这一次可以标记完成、改期（`dueAt: null` 取消改期）和删除（即跳过这一次），都只影响这一次，不会改动整个系列。标题跟随系列，要改标题用 `view: "tasks"` 返回的系列 ID。周期规则本身由用户在 Tau 中设置，插件不能创建或修改。
-- `calendar.query` 的 `start`、`end` 必填，可以是 `YYYY-MM-DD` 或带时区的 ISO 时间，每页最多 100 条。由待办安排出的日程带 `todoId`。
+需要离线续读或发现删除时，使用 `context.data.changes.query`。处理成功后再保存游标，完整流程和失败处理见[待办与日程 · 按游标读取变化](task-data.md#按游标读取变化)。
 
 ## 修改与删除
 
@@ -185,9 +176,9 @@ try {
 | `documents.move(id, { projectId, from, to, index }, ...)` | 在同一项目内移动，见[项目目录](#项目目录)                                                            |
 | `whiteboards.create` / `whiteboards.update`               | `title`（新建时必填）、`description`、`tags`；新建的白板带一张空白画板页                             |
 | `projects.create` / `projects.update`                     | 新建：`title`（必填），得到空项目；修改：`title`、`archived`、`pinned`                               |
-| `todos.create` / `todos.update`                           | `title`、`dueAt`（`YYYY-MM-DD`、带时区的 ISO 时间或 `null`）                                         |
+| `todos.create` / `todos.update` | 标题、截止日期、待办项目与提醒，见[待办与日程](task-data.md#创建带提醒的待办) |
 | `todos.setCompleted(id, completed, ...)`                  | 标记完成或未完成                                                                                     |
-| `calendar.create` / `calendar.update`                     | `title`、`start`、`end`、`allDay`、`calendarId`（省略时为默认日历）                                  |
+| `calendar.create` / `calendar.update` | 时段、日历、提醒与备注，见[安排日程与编辑备注](task-data.md#安排日程与编辑备注) |
 | `*.delete(id, ...)`                                       | 删除卡片、文章、白板、项目、项目文档、待办、日程，限制见下                                           |
 
 - `content` 是新建时的正文，写法见[正文输入](document-body.md#正文输入)；修改已有正文用 [`context.content.edit`](document-body.md#修改)。
@@ -195,11 +186,15 @@ try {
 - 有截止日期的待办会在日历里显示为一条日程。这类日程只能通过待办接口修改：`calendar.update` 不能改它的标题，也不能把它移到别的日历。
 - 全天日程的 `start`、`end` 用 `YYYY-MM-DD`，且 `end` 不包含当天：一个只占 10 月 21 日的全天日程，`end` 是 `2026-10-22`。定时日程用带时区的 ISO 时间。
 
+### 待办项目、日历与完整字段
+
+待办项目、日历发现、提醒、重复与实例、日程备注以及创建请求重试，见[待办与日程](task-data.md)。
+
 ### 用 revision 避免覆盖别人的修改
 
 每一项数据都带有 `revision`。修改和删除时必须把读到的 `revision` 作为 `expectedRevision` 传回。如果这期间用户或其他插件改过这一项，调用会抛出 `PluginConflictError`，而不是悄悄覆盖。遇到冲突时重新读取，再决定是否重试。修改返回的新对象带有新的 `revision`，连续修改时用它。
 
-修改正文不会改变实体的 `revision`，正文有自己的版本，见[正文](document-body.md#修改)。
+卡片、文章和项目文档的正文有独立版本，修改正文不改变它们的元数据 revision，见[正文](document-body.md#修改)。日程的聚合 revision 还覆盖备注正文和完整提醒列表；版本只用于比较相等，不能按大小或时间戳选择覆盖哪一方。
 
 ### 写入后
 

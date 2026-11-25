@@ -50,20 +50,21 @@ example.template/
 
 ### manifest
 
-构建脚本根据 `template.json` 生成的 manifest：
+构建脚本可用 `@tau/plugins/unified` 的 `buildUnifiedPackageManifest` 根据 `template.json` 和文件摘要生成 manifest：
 
 ```json
 {
-  "formatVersion": 1,
+  "formatVersion": 4,
+  "kind": "template",
   "apiVersion": 1,
-  "platform": "desktop",
+  "platform": "portable",
   "id": "yourname.paper-blog",
   "name": "纸页",
   "version": "1.0.0",
   "description": "安静的单栏博客模板，适合长文。",
   "categories": ["blog-template"],
   "keywords": ["博客", "单栏"],
-  "minAppVersion": "0.59.0",
+  "targets": { "desktop": { "minAppVersion": "0.66.3" } },
   "template": {
     "protocolVersion": 1,
     "root": "site",
@@ -86,10 +87,10 @@ example.template/
 
 | 字段                                      | 说明                                                                  |
 | ----------------------------------------- | --------------------------------------------------------------------- |
-| `formatVersion`、`apiVersion`、`platform` | 照抄上面的值。模板只能在桌面 Tau 中选择和发布                         |
+| `formatVersion`、`apiVersion`、`kind`、`platform` | 照抄上面的值。模板只能在桌面 Tau 中选择和发布                         |
 | `id`、`name`、`version`、`description`    | 与插件相同，见[插件的组成](plugin-basics.md#manifest)                 |
 | `categories`                              | 填 `["blog-template"]`，插件中心会把它放进「博客模板」分类            |
-| `minAppVersion`                           | 可选。填你实际测试过的桌面 Tau 版本                                   |
+| `targets.desktop.minAppVersion`           | 必填。填你实际测试过的桌面 Tau 版本                                   |
 | `template.protocolVersion`                | 照抄 `1`                                                              |
 | `template.root`                           | 静态文件所在的目录，起步仓库是 `site`                                 |
 | `template.entries`                        | 入口 HTML，相对 `root` 的路径，至少一个，必须以 `.html` 结尾          |

@@ -68,6 +68,7 @@ export default definePlugin({
 | 保存插件自己的设置和进度、请求网络、建立 WebSocket 连接 | [存储与网络](storage-and-network.md) |
 | 让用户挑一张卡片或一篇文章给插件用，或者打开它          | [引用用户的内容](references.md)      |
 | 成批查询、修改用户的卡片、文章、项目文档、待办、日程    | [读写用户数据](user-data.md)         |
+| 查询待办项目和日历、设置提醒与重复、保存变化进度 | [待办与日程](task-data.md) |
 | 申请访问用户数据的权限，处理用户拒绝                    | [权限](permissions.md)               |
 | 读取或修改一篇内容的正文，在插件里嵌入正文编辑器        | [正文](document-body.md)             |
 | 创建插件自己的内容（如周记）或按字段查询的记录          | [插件内容与记录](plugin-content.md)  |
