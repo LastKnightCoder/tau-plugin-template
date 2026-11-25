@@ -101,21 +101,9 @@ node -e 'const m=require("./manifest.json"),f=`${m.id}-${m.version}.zip`,b=requi
 
 ### 本地安装
 
-`pnpm install:local` 把构建好的 ZIP 直接解压到本机的插件目录 `~/.editor/plugins/<插件ID>/`，再在 Tau 插件页的「⋯」里点「重新扫描」就能看到它。它不经过插件中心，所以正式版桌面 Tau 也能用，但只接受**manifest 里没有 `targets` 声明、只装在桌面**的两类包：
+构建出的包通过插件中心安装，开发时使用上面的[桌面](#桌面)或 [Android 与 iOS](#android-与-ios) 方式装进开发版。这个规则也适用于只声明桌面的插件、本机后台和独立 Skill 包。
 
-- [本机后台](backend.md)插件：它的 manifest 不写 `targets`，用顶层的 `minAppVersion`。
-- 只写 `"platform": "desktop"` 和顶层 `minAppVersion` 的[独立 Skill 包](skills.md#独立的-skill-包)。
-
-manifest 里有 `targets` 的包（包括模板自带的计数器，以及声明了 `android`、`ios` 的 Skill 包）运行 `pnpm install:local` 会直接报错，这类包按上面的[桌面](#桌面)或 [Android 与 iOS](#android-与-ios) 的方法装进开发版。
-
-两种方式怎么选：
-
-| 你的插件                              | 怎么装                                         |
-| ------------------------------------- | ---------------------------------------------- |
-| manifest 里有 `targets`（大多数插件） | Tau 开发版的「从 ZIP 安装…」或「受控开发安装」 |
-| 本机后台插件、只装桌面的 Skill 包     | `pnpm install:local`，正式版和开发版都可以     |
-
-`pnpm install:local` 只用于第一次安装，插件目录里已经有同 ID 的插件时会拒绝覆盖。之后的更新改用开发版的「从 ZIP 安装…」并提高版本；或者在 Tau 里停用插件，备份并移走 `~/.editor/plugins/<插件ID>/` 后再运行一次。插件 ID 不变，已保存的数据就会保留。
+`pnpm install:local` 不接受当前构建器生成的包，也不会覆盖已有同 ID 的安装。更新插件时保持 ID 不变并提高版本，已保存的数据和设置按原有规则保留。
 
 ## 改成自己的插件
 

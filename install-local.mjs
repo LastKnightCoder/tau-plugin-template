@@ -20,6 +20,10 @@ try {
 const zip = new AdmZip(path.resolve("dist", `${manifest.id}-${manifest.version}.zip`));
 const entries = zip.getEntries().filter(entry => !entry.isDirectory);
 const packaged = JSON.parse(zip.readAsText(`${manifest.id}/manifest.json`));
+if (packaged.formatVersion === 4)
+  throw new Error(
+    "格式 4 包不能写入正式客户端目录，请通过插件中心安装，或使用显式支持该协议的开发宿主"
+  );
 // 没有 main 的是独立 Skill 包，只含 skills/ 目录
 const skillPackage = packaged.main === undefined;
 if (

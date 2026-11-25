@@ -9,7 +9,7 @@ Skill 可以这样分发：
 | [随插件附带](#随插件附带)           | 插件提供了块、工具或页面，需要教 AI 怎么配合使用 | Skill 随插件启用出现，停用后消失 |
 | [独立的 Skill 包](#独立的-skill-包) | 一套写作规范、工作流程等，不需要任何插件代码     | 从插件中心安装后，Skill 直接可用 |
 
-两种方式的 Skill 目录写法相同，区别在于能不能带脚本，见[附带文件与脚本](#附带文件与脚本)。
+两种方式使用相同的 Skill 目录，文件与脚本的使用方式见[附带文件与脚本](#附带文件与脚本)。
 
 ## 一个 Skill 目录
 
@@ -62,7 +62,7 @@ description: 用户要在文档里插入或修改图表块时加载，说明图�
 - **脚本**：AI 可以执行目录里的脚本，工作目录就是这个 Skill 目录。按扩展名选择解释器：`.py` 用 python3，`.js`、`.mjs`、`.cjs` 用 Node.js，`.sh` 用 bash，`.ts` 用 tsx；其他文件需要有可执行权限。
 - 每次执行脚本前，Tau 都会请用户确认。单次执行最长 120 秒，输出最多保留 64 KiB。
 - 脚本以用户身份运行，没有沙箱。Tau 不会替用户安装 Python 等运行环境，需要时在 README 里写清楚。
-- **能带脚本的包**：[独立的 Skill 包](#独立的-skill-包)，以及只装在桌面的[本机后台](backend.md)插件。普通插件（manifest 里有 `targets`）附带的 Skill 只能是 Markdown 文件，目录里有 `scripts/` 或其他类型的文件时构建会失败。
+- 独立 Skill 包与应用插件都可以携带脚本和参考资料；是否支持手机由 `targets` 声明。
 - **脚本只在桌面上运行**，手机上的差异见[多端适配](portability.md#各平台可用的接口)。
 - **带脚本的版本需要插件中心人工审核**（包括 `scripts/` 下的任何文件，以及目录里的 `.js`、`.mjs`、`.cjs`、`.ts`、`.py`、`.sh` 文件），不能通过自动发布直接上架。只含文档的 Skill 不受此限制。
 
@@ -84,7 +84,7 @@ my-plugin/
 - 插件启用后，Skill 出现在 Tau 的 Skill 页，标注「插件 · 插件名」；插件停用后自动消失。
 - 用户可以在 Skill 页调整它的调用方式（自动、仅手动、停用），或者复制一份到自己的 Skill 目录修改。
 - AI 引用它时使用 `插件ID:目录名`，例如 `yourname.chart:chart-authoring`。
-- 普通插件附带的 Skill 只能是 Markdown 文档；需要脚本时，做成下文的独立 Skill 包。
+- 插件附带的 Skill 可以包含说明、参考资料与脚本。含脚本的发行版需要系统能力审核；手机只读取说明和资料，不执行脚本。
 - 你的插件提供了 [MCP 工具](mcp.md)时，可以在 SKILL.md 里说明什么时候调用哪个工具、参数怎么填。
 
 ## 独立的 Skill 包
@@ -93,28 +93,26 @@ my-plugin/
 
 ```json
 {
-  "formatVersion": 1,
+  "kind": "skills",
   "id": "yourname.writing-style",
   "name": "写作风格",
   "description": "让 AI 按统一的风格写文章和卡片。",
   "categories": ["skill"],
   "keywords": ["写作", "风格"],
   "version": "1.0.0",
-  "apiVersion": 1,
-  "platform": "portable",
   "targets": {
-    "desktop": { "minAppVersion": "0.60.4" },
-    "android": { "minAppVersion": "0.2.13" },
-    "ios": { "minAppVersion": "0.2.13" }
+    "desktop": { "minAppVersion": "0.66.3" },
+    "android": { "minAppVersion": "0.5.1" },
+    "ios": { "minAppVersion": "0.5.1" }
   }
 }
 ```
 
-和代码插件相比，Skill 包**没有** `main`、`format`、`profile`，也不能声明 `permissions`、`backend`、`editor`、`whiteboard`。构建脚本看到 manifest 里没有 `main`，就会跳过代码打包，只打包 `skills/` 目录。
+和代码插件相比，Skill 包**没有** `main`、`format`、`profile`，也不能声明 `permissions`、`backend`、`editor`、`whiteboard`。构建脚本根据 `kind: "skills"` 跳过代码打包，只打包 `skills/` 目录。
 
 `targets` 的写法与代码插件相同，见[多端适配](portability.md#声明支持的平台)。手机上 AI 不执行脚本，所以带脚本的 Skill 包要么只装在桌面，要么在 SKILL.md 里写明没有脚本时怎么做。
 
-只装在桌面的 Skill 包把 `"platform": "portable"` 和 `targets` 换成 `"platform": "desktop"` 和顶层的 `minAppVersion`，其他字段不变。
+只装在桌面的 Skill 包只保留 `targets.desktop`，其他字段不变。
 
 ```text
 writing-style/
@@ -125,7 +123,7 @@ writing-style/
       SKILL.md
 ```
 
-- `pnpm build` 构建后，按[快速开始 · 本地安装](getting-started.md#本地安装)装进 Tau，Skill 就会出现在 Skill 页，标注「Skill 包 · 包名」。
+- `pnpm build` 构建后，按[快速开始 · 在 Tau 里调试](getting-started.md#在-tau-里调试)装进 Tau，Skill 就会出现在 Skill 页，标注「Skill 包 · 包名」。
 - Skill 包不参与插件启停，用户在 Skill 页逐个调整调用方式或停用。
 - 发布流程与代码插件完全相同，见[发布与更新](release.md)。分类建议填 `skill`。
 - README 照样是给用户看的：这套 Skill 能让 AI 做什么，用户怎么点名使用。

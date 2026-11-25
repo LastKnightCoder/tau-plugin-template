@@ -8,20 +8,14 @@
 
 ### 1. 修改 manifest
 
-带后台的插件使用桌面专用的包格式：删掉 `targets`，改写成下面的样子，并加上 `backend`：
-
+在 manifest 中保留 `targets`，只声明桌面，并添加 `backend`：
 ```json
 {
   "id": "yourname.device-status",
   "name": "设备状态",
   "description": "在页面里显示本机设备的状态。",
   "version": "1.0.0",
-  "formatVersion": 2,
-  "apiVersion": 1,
-  "platform": "desktop",
-  "format": "cjs",
-  "main": "main.js",
-  "minAppVersion": "0.59.0",
+  "targets": { "desktop": { "minAppVersion": "0.66.3" } },
   "backend": {
     "entry": "backend.js",
     "runtime": "node",
@@ -35,7 +29,7 @@
 }
 ```
 
-`formatVersion`、`apiVersion`、`platform`、`format`、`main` 照抄上面的值。`minAppVersion` 必填，填你实际测试过的桌面 Tau 版本。这类插件只能安装在桌面上。
+包格式与运行配置由构建器生成。`targets.desktop.minAppVersion` 填你实际测试过的桌面 Tau 版本；有本机后台的插件不能声明 Android 或 iOS。
 
 | 字段                    | 说明                                                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -171,6 +165,6 @@ const result = await ctx.process.run("git", ["status", "--short"], { signal });
 
 ## 发布
 
-后台和界面在同一个 ZIP 中，作为一个整体更新，不能只替换 `backend.js`。带后台的插件用 `pnpm install:local` 装进 Tau，见[快速开始 · 本地安装](getting-started.md#本地安装)；发布流程与普通插件相同，见[发布与更新](release.md)。
+后台和界面在同一个 ZIP 中，作为一个整体更新，不能只替换 `backend.js`。带后台的插件也通过插件中心安装；开发验证见[快速开始 · 在 Tau 里调试](getting-started.md#在-tau-里调试)；发布流程与普通插件相同，见[发布与更新](release.md)。
 
 插件的管理页面会显示后台的状态、错误、启动耗时和资源占用，便于用户和你排查问题。后台的 stdout、stderr 不会写入 Tau 的日志，需要诊断信息时通过 RPC 返回给界面。

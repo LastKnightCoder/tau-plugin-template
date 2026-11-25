@@ -21,6 +21,8 @@
 - 列出一个平台，表示插件的**全部功能**都已在这个平台上适配并测试过。只有部分功能能用的平台，不要列。
 - 用到下表中只有桌面支持的接口时，只写 `desktop`。
 
+插件、独立 Skill 与博客模板共用包协议，包类型和支持平台分别声明。构建器生成包格式、入口和摘要，并确保平台最低版本满足包协议要求。只声明 `desktop` 的包仍使用同一协议。
+
 你不需要在 manifest 里声明用到了哪些接口：Tau 根据平台和版本判断能否安装，接口本身由代码注册。
 
 ## 各平台可用的接口
@@ -54,11 +56,32 @@
 | `mcp`、`chat`                                                  | ✓    | 部分          | 手机上可以注册，但工具不会出现在手机的对话里，见[MCP 工具](mcp.md)                                                        |
 | `services`                                                     | ✓    |               |                                                                                                                           |
 | 白板扩展（`whiteboardExtensions`）                             | ✓    |               |                                                                                                                           |
-| `backend`（本机后台）                                          | ✓    |               | 需要单独的包格式，见[本机后台](backend.md)                                                                                |
-| 随插件附带的 Skill                                             | ✓    | ✓             | 只能附带 Markdown，不能带脚本；手机上 AI 同样能读，见[Skill](skills.md)                                                   |
+| `backend`（本机后台）                                          | ✓    |               | 只声明桌面目标，见[本机后台](backend.md)                                                                                |
+| 随插件附带的 Skill                                             | ✓    | ✓             | 手机上 AI 只读说明和资料，不执行脚本，见[Skill](skills.md)                                                   |
 | 独立 Skill 包                                                  | ✓    | ✓             | 可以带脚本，脚本只在桌面执行，手机上 AI 只读说明，见[Skill · 独立的 Skill 包](skills.md#独立的-skill-包)                  |
 
 代码里能导入某个接口，不代表它在当前平台可用。以上表为准，不确定时在真机上试。
+
+### 待办与日程接口
+
+完整待办/日程能力在桌面、Android 和 iOS 的开发版中实现，包括目录、提醒、备注、重复规则、实例状态和正文变化读取。SDK 的接口声明不代表用户安装的 Tau 已具备这些能力；使用这些接口的正式插件，应等待对应客户端发行，并以实际通过验证的版本填写 targets.minAppVersion。
+
+未具备接口的客户端不能通过省略参数代替成功。插件可以在入口检查需要的方法，给出升级提示；调用失败时保留处理进度，不能把失败当作空列表。
+
+```ts
+import type { PluginContext } from "@tau/plugins";
+
+function supportsTaskSync(context: PluginContext) {
+  return typeof context.data.todos.setRecurrence === "function"
+    && typeof context.data.todos.occurrenceStates?.query === "function"
+    && typeof context.data.changes?.query === "function";
+}
+```
+
+- 桌面和手机使用相同参数与条件写入方式，见[待办与日程](task-data.md)。
+- 正文勾选项只有一条提醒；普通任务可以是绝对时刻，重复任务使用当日零点偏移。
+- 不支持独立重复日程、任意 RRULE、完整原始时区标识或多设备执行互斥。需要这些数据的插件应明确提示无法表达的部分。
+- 只发布 SDK 不会升级 Tau，也不会自动开放插件中心的平台范围。
 
 ### 手机上能申请的权限
 

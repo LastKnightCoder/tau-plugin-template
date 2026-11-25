@@ -24,7 +24,7 @@
 - 访问用户数据要声明权限并处理 `PluginPermissionError`（见 `docs/permissions.md`）；修改、删除传入 `revision` 并处理 `PluginConflictError`（见 `docs/user-data.md`）。
 - 服务提供方的账号配置用配置表单保存，不要存进 `context.storage`。
 - 给 AI 的使用说明写成 `skills/<id>/SKILL.md`（front matter 必须有 `description`），构建时自动打包，见 `docs/skills.md`。
-- 独立 Skill 包使用 `formatVersion: 1`、`platform: "portable"` 与 `targets`，不声明代码入口。手机上可以安装独立 Skill 包，脚本文件随包安装但不运行。
+- 独立 Skill 包声明 `kind: "skills"` 与 `targets`，不声明代码入口；构建器统一生成格式 4。手机上可以安装独立 Skill 包，脚本文件随包安装但不运行。
 - 不要把密钥、令牌或机器特定路径写进源码和插件包。
 
 ## 依赖与构建
@@ -32,7 +32,7 @@
 - 用 pnpm 管理依赖并提交 `pnpm-lock.yaml`，不要混用 npm 或 yarn。
 - 保持模板的构建配置和依赖版本，尤其是 `build.mjs` 的 external 列表和 React 版本。只有任务确实需要时才调整构建工具。
 - 完成修改后运行 `pnpm build`。如实说明验证结果：构建成功只代表类型和打包通过，不代表功能在 Tau 中可用。
-- 带 `targets` 的插件不能用 `pnpm install:local` 安装，它只接受本机后台插件和只装桌面的 Skill 包，见 `docs/getting-started.md` 的「本地安装」。
+- 当前构建器生成的包通过插件中心或显式支持该协议的开发版安装，不能用 `pnpm install:local` 写入正式目录，见 `docs/getting-started.md` 的「本地安装」。
 - 在 Tau 中验证的方法见 `docs/getting-started.md`：验证启用、功能、数据保存、停用和重启后恢复，未验证的项目如实列出。
 
 ## 用户可见的文字

@@ -16,27 +16,16 @@ import { randomUUID, createHash } from "node:crypto";
 import { isBuiltin } from "node:module";
 
 const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
-const portable = manifest.targets !== undefined;
-
-// manifest 不写 main 时构建独立 Skill 包：没有代码入口，只打包 skills/ 目录
+const portable = manifest.backend === undefined;
+const templatePackage = manifest.template !== undefined;
 const skillPackage =
-  manifest.formatVersion === 1 && manifest.main === undefined && manifest.template === undefined;
-if (skillPackage) {
-  const { assertLocalId, comparePluginVersions } = await import("@tau/plugins/package");
-  assertLocalId(manifest.id);
-  comparePluginVersions(manifest.version, manifest.version);
-}
-let backend;
-let validateManifest;
-if (skillPackage) {
-  validateManifest = (await import("@tau/plugins/template")).validateDistributionManifest;
-} else if (manifest.targets) {
-  validateManifest = (await import("@tau/plugins/portable")).buildPortablePluginManifest;
-} else if (!skillPackage) {
-  const api = await import("@tau/plugins/package");
-  if (manifest.backend !== undefined) backend = api.validateBackendManifest(manifest.backend);
-  validateManifest = api.validatePluginManifest;
-}
+  manifest.kind === "skills" ||
+  (manifest.formatVersion === 1 && manifest.main === undefined && !templatePackage);
+const { buildUnifiedPackageManifest } = await import("@tau/plugins/unified");
+const backend =
+  manifest.backend === undefined
+    ? undefined
+    : (await import("@tau/plugins/package")).validateBackendManifest(manifest.backend);
 
 /** skills/<id>/ 下每个目录是一个 Skill：必须有带 description 的 SKILL.md，全部文件原样打包。 */
 async function collectSkills(staging) {
@@ -119,39 +108,62 @@ try {
   const skills = await collectSkills(staging);
   if (skillPackage && !skills.ids.length)
     throw new Error("Skill 包至少需要一个 skills/<id>/SKILL.md");
-  const result = skillPackage
-    ? undefined
-    : await build({
-        entryPoints: ["src/index.tsx"],
-        outfile: path.join(staging, "main.js"),
-        bundle: true,
-        platform: "browser",
-        format: "cjs",
-        target: "es2022",
-        jsx: "automatic",
-        external: shared,
-        plugins: [
-          {
-            name: "browser-dependencies",
-            setup(builder) {
-              builder.onResolve({ filter: /.*/ }, args => {
-                if (isBuiltin(args.path))
-                  return { errors: [{ text: `浏览器入口不能依赖 Node 内置模块：${args.path}` }] };
-              });
+  const templateFiles = [];
+  if (templatePackage) {
+    const root = manifest.template.root;
+    if (
+      typeof root !== "string" ||
+      root.includes("\\") ||
+      root.split("/").some(part => !part || part === "." || part === "..")
+    )
+      throw new Error("模板资源目录无效");
+    const collectTemplate = async relative => {
+      const info = await lstat(relative);
+      if (info.isSymbolicLink()) throw new Error(`模板不能包含符号链接：${relative}`);
+      if (info.isDirectory()) {
+        for (const name of await readdir(relative)) await collectTemplate(`${relative}/${name}`);
+      } else if (info.isFile()) {
+        await mkdir(path.dirname(path.join(staging, relative)), { recursive: true });
+        await cp(relative, path.join(staging, relative));
+        templateFiles.push(relative);
+      } else throw new Error(`模板资源必须是普通文件：${relative}`);
+    };
+    await collectTemplate(root);
+  }
+  const result =
+    skillPackage || templatePackage
+      ? undefined
+      : await build({
+          entryPoints: ["src/index.tsx"],
+          outfile: path.join(staging, "main.js"),
+          bundle: true,
+          platform: "browser",
+          format: "cjs",
+          target: "es2022",
+          jsx: "automatic",
+          external: shared,
+          plugins: [
+            {
+              name: "browser-dependencies",
+              setup(builder) {
+                builder.onResolve({ filter: /.*/ }, args => {
+                  if (isBuiltin(args.path))
+                    return { errors: [{ text: `浏览器入口不能依赖 Node 内置模块：${args.path}` }] };
+                });
+              },
             },
+          ],
+          metafile: true,
+          loader: { ".svg": "dataurl" },
+          define: {
+            __PLUGIN_PORTABLE__: JSON.stringify(portable),
+            __PLUGIN_META__: JSON.stringify({
+              id: manifest.id,
+              name: manifest.name,
+              version: manifest.version,
+            }),
           },
-        ],
-        metafile: true,
-        loader: { ".svg": "dataurl" },
-        define: {
-          __PLUGIN_PORTABLE__: JSON.stringify(portable),
-          __PLUGIN_META__: JSON.stringify({
-            id: manifest.id,
-            name: manifest.name,
-            version: manifest.version,
-          }),
-        },
-      });
+        });
   for (const output of Object.values(result?.metafile.outputs ?? {})) {
     for (const dependency of output.imports) {
       if (dependency.external && !shared.includes(dependency.path))
@@ -183,7 +195,8 @@ try {
   }
   const integrity = {};
   for (const file of [
-    ...(skillPackage ? [] : ["main.js"]),
+    ...(skillPackage || templatePackage ? [] : ["main.js"]),
+    ...templateFiles,
     ...(styles ? ["main.css"] : []),
     ...(backend ? [backend.entry] : []),
     ...skills.files,
@@ -191,21 +204,12 @@ try {
     integrity[file] = createHash("sha256")
       .update(await readFile(path.join(staging, file)))
       .digest("hex");
-  // skills 由 skills/ 目录生成，忽略 manifest 中手写的值
-  let packaged = { ...manifest, integrity, ...(styles ? { styles: "main.css" } : {}) };
-  delete packaged.skills;
-  if (skills.ids.length) packaged.skills = skills.ids;
-
-  if (validateManifest) {
-    if (portable && !skillPackage)
-      packaged = validateManifest(manifest, {
-        main: "main.js",
-        integrity,
-        ...(styles ? { styles: "main.css" } : {}),
-        ...(skills.ids.length ? { skills: skills.ids } : {}),
-      });
-    else packaged = { ...validateManifest(packaged), description: manifest.description };
-  }
+  const packaged = buildUnifiedPackageManifest(manifest, {
+    ...(!skillPackage && !templatePackage ? { main: "main.js" } : {}),
+    integrity,
+    ...(styles ? { styles: "main.css" } : {}),
+    ...(skills.ids.length ? { skills: skills.ids } : {}),
+  });
   await writeFile(path.join(staging, "manifest.json"), JSON.stringify(packaged, null, 2));
   const destination = path.resolve("dist", `${manifest.version}-${buildId}`);
   await rename(staging, destination);
@@ -224,7 +228,7 @@ try {
   const archive = path.resolve("dist", `${manifest.id}-${manifest.version}.zip`);
   zip.writeZip(archive);
   console.log(
-    `构建完成：${archive}\n${portable ? "跨端包沿用插件中心上架规则，作者负责平台适配与测试；桌面与移动安装均需兼容的正式客户端。" : "运行 pnpm install:local 安装到 Tau，然后在插件页点「重新扫描」。"}`
+    `构建完成：${archive}\n格式 4 包通过插件中心安装，开发验证使用显式支持该协议的开发宿主。`
   );
 } catch (error) {
   await rm(staging, { recursive: true, force: true });

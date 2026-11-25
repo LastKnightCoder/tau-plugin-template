@@ -124,3 +124,5 @@ function CardRow({ card }: { card: PluginCard }) {
 - `kit` 选编辑器套件：`full`（默认）与卡片详情相同；`compact` 是精简套件，与白板图形文字、PDF 批注等简短内容的编辑器相同，不含内容链接、文件附件、白板块、数据库块和文档待办，适合标题下的一段说明、回答这类简短内容。正文里已有这些块时显示为占位，数据原样保留。编辑和预览同一份内容时请用同一个 `kit`。
 
 想让插件有自己的、带正文的内容（如周记），读[插件内容与记录](plugin-content.md)。
+
+日程备注的 notesRef 也使用这些读写方法，权限为 `calendar:read` 与 `calendar:write`。日程没有备注句柄时先通过 `context.data.calendar.ensureNotes` 建立空正文；元数据和备注分别使用各自的条件写入，见[读写用户数据](user-data.md#待办项目日历与完整字段)。
