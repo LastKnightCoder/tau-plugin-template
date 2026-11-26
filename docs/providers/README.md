@@ -100,30 +100,60 @@ context.settings.register({
 
 桌面上，表单是插件详情「设置」里的一张设置卡片，每个分组是卡片里的一节；手机上，每个分组是一组设置行，选项在推入的选择页里挑。保存按钮和离开前的确认都由 Tau 提供。
 
+### 跟随界面语言
+
+在插件自己的 JSON 词典中声明表单文案，并将该词典挂到 `definePlugin` 的 `i18n`，做法见[界面语言](/docs/ui-components.md#界面语言)。表单使用 `ProviderFormDeclaration`，文字字段填 `messages.ref()`，不用重新登记或为语言变化重新请求远程选项：
+
+```ts
+import type { PluginContext, ProviderFormDeclaration } from "@tau/plugins";
+import { messages } from "./i18n";
+
+export function registerSettings(context: PluginContext) {
+  const form = {
+    groups: [
+      {
+        title: messages.ref("account.title"),
+        fields: [{ key: "token", type: "secret", label: messages.ref("account.token") }],
+      },
+    ],
+  } satisfies ProviderFormDeclaration;
+  context.settings.register({
+    id: "account",
+    title: messages.ref("settings.title"),
+    target: "publish",
+    form,
+  });
+}
+```
+
+示例中的 `messages` 按界面语言指南导入独立 JSON 文件，并声明 `account.title`、`account.token`、`settings.title`。分组标题、说明和链接名称，字段的标签、说明和占位，以及静态或远程选项的标签、说明都接受引用；纯字符串保持原文。远程 `load` 的返回选项也可以使用 `messages.ref()`，语言变化只更新展示，不再调用 `load`。
+
+`key`、`value`、`default`、`labelKey`、依赖条件与 URL 是业务值，保持普通值。`ProviderForm` 仍表示宿主已解析的字符串表单；验证、摘要和保存逻辑继续使用它。
+
 ### 字段类型
 
-| `type`           | 用途                                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------ |
-| `text`           | 普通文本                                                                                                     |
-| `secret`         | 密钥、令牌、密码。输入时隐藏，不能作摘要                                                                     |
-| `url`            | 地址                                                                                                         |
-| `choice`         | 固定选项，`options` 至少一项，`default` 为缺省值                                                             |
+| `type`           | 用途                                                                                                          |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| `text`           | 普通文本                                                                                                      |
+| `secret`         | 密钥、令牌、密码。输入时隐藏，不能作摘要                                                                      |
+| `url`            | 地址                                                                                                          |
+| `choice`         | 固定选项，`options` 至少一项，`default` 为缺省值                                                              |
 | `remote-choice`  | 按已填的值远程加载选项（如仓库、分支）：`load(values, signal)` 返回选项；`dependsOn` 中的字段变化时清空本字段 |
-| `switch`         | 开关，值为 `"true"` / `"false"`，`default` 写布尔值；不参与必填校验，不能作摘要                              |
-| `service-choice` | 由 Tau 弹出选择，用户不直接输入。`service` 目前只能写 `git.cacheDirectory`（选择本机目录，只能在桌面上改）   |
+| `switch`         | 开关，值为 `"true"` / `"false"`，`default` 写布尔值；不参与必填校验，不能作摘要                               |
+| `service-choice` | 由 Tau 弹出选择，用户不直接输入。`service` 目前只能写 `git.cacheDirectory`（选择本机目录，只能在桌面上改）    |
 
 `service-choice` 的值存在 `key`，显示名存在 `labelKey`（必须是另一个没被占用的键）；留空表示用 Tau 的默认位置，`placeholder` 写默认时的说明。
 
 ### 字段与分组的属性
 
-| 属性          | 说明                                                                                                       |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| `key`、`label` | 必填。`key` 在整张表单内不能重复                                                                          |
-| `description` | 字段下方的说明                                                                                             |
-| `placeholder` | 输入框的占位文字                                                                                           |
-| `optional`    | 不写就是必填，空值时 Tau 拒绝保存并标在字段上。「可选」由 Tau 显示，不要写进 `label`                       |
-| `summary`     | 按声明顺序拼成服务列表里的摘要，例如「tau-sync · ap-southeast-1」                                          |
-| `visibleWhen` | `{ key, equals }`：只在另一字段取这个值时显示。隐藏的字段不参与必填校验，已存的值保留                      |
+| 属性           | 说明                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `key`、`label` | 必填。`key` 在整张表单内不能重复                                                      |
+| `description`  | 字段下方的说明                                                                        |
+| `placeholder`  | 输入框的占位文字                                                                      |
+| `optional`     | 不写就是必填，空值时 Tau 拒绝保存并标在字段上。「可选」由 Tau 显示，不要写进 `label`  |
+| `summary`      | 按声明顺序拼成服务列表里的摘要，例如「tau-sync · ap-southeast-1」                     |
+| `visibleWhen`  | `{ key, equals }`：只在另一字段取这个值时显示。隐藏的字段不参与必填校验，已存的值保留 |
 
 - 选项可以带 `description`。手机上，不超过三个、带说明的选项直接平铺成整行单选；桌面在字段说明里显示当前选项的说明。
 - 分组有 `title`（必填）、`description`，以及可选的 `link: { label, url }`，用于服务商控制台等外部链接，只接受 `https://` 地址。
@@ -146,11 +176,19 @@ context.settings.register({
 
 ```tsx
 import { useState } from "react";
-import { useSettingsDraft, type JsonValue, type PluginContext, type PluginSettingsProps } from "@tau/plugins";
+import {
+  useSettingsDraft,
+  type JsonValue,
+  type PluginContext,
+  type PluginSettingsProps,
+} from "@tau/plugins";
 import { Input, SettingRow } from "@tau/ui";
 
 function readCookie(value: JsonValue | undefined) {
-  return value && typeof value === "object" && !Array.isArray(value) && typeof value.cookie === "string"
+  return value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    typeof value.cookie === "string"
     ? value.cookie
     : "";
 }
