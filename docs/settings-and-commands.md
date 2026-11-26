@@ -14,7 +14,7 @@ function Preferences({ context }: PluginSettingsProps) {
   const [step, setStep] = useState<number | null>(null);
 
   useEffect(() => {
-    void context.storage.get("step").then((value) => {
+    void context.storage.get("step").then(value => {
       setStep(typeof value === "number" ? value : 1);
     });
   }, [context]);
@@ -26,7 +26,7 @@ function Preferences({ context }: PluginSettingsProps) {
       <NumberInput
         value={step}
         min={1}
-        onValueChange={(value) => {
+        onValueChange={value => {
           const next = value ?? 1;
           setStep(next);
           void context.storage.set("step", next);
@@ -116,11 +116,13 @@ function ProfileSettings({ context, saved }: PluginSettingsProps & { saved: Prof
       <NumberInput
         aria-invalid={invalid}
         value={draft.height}
-        onValueChange={(height) => setDraft({ height: height ?? 0 })}
+        onValueChange={height => setDraft({ height: height ?? 0 })}
       />
       {/* 不在设置页里（如放进插件页面）时没有保存条，自己给保存按钮 */}
       {!settings && (
-        <Button onClick={() => void context.storage.set("profile", draft).then(() => setCommitted(draft))}>
+        <Button
+          onClick={() => void context.storage.set("profile", draft).then(() => setCommitted(draft))}
+        >
           保存
         </Button>
       )}
@@ -136,11 +138,13 @@ function ProfileSettings({ context, saved }: PluginSettingsProps & { saved: Prof
 | `dirty`      | 草稿与已保存的值不同                                                                     |
 | `errors`     | 可选。填写有误的项数，大于 0 时不能保存。把出错的输入框设为 `aria-invalid`，Tau 会滚过去 |
 | `changes`    | 可选。修改清单，`from`、`to` 省略时只显示名称（适合密钥）                                |
-| `save`       | 写入草稿。返回的文字显示在「已保存」位置；抛错时保存条显示错误信息，草稿保留             |
+| `save`       | 写入草稿。可返回说明文字或 `SettingsDraftFeedback`；抛错时显示错误信息，草稿保留         |
 | `reset`      | 回到已保存的值                                                                           |
 | `onInvalid`  | 可选。有错误时用户仍点了保存，可以在这里把所有错误标出来                                 |
-| `saveLabel`  | 可选。保存按钮文字，默认「保存」                                                         |
-| `savingText` | 可选。保存中的文字，默认「正在保存…」                                                    |
+| `saveLabel`  | 可选。保存按钮文字；省略时跟随 Tau 的界面语言                                            |
+| `savingText` | 可选。保存中的文字；省略时跟随 Tau 的界面语言                                            |
+
+保存说明需要随语言更新时，可以返回带 `message` getter 的 `SettingsDraftFeedback`，在 getter 中调用所属插件的 `context.i18n.t()`。例如在插件 JSON 词典声明 `settings.saved` 后，`save` 完成时返回 `{ get message() { return context.i18n.t("settings.saved"); } }`。Tau 展示时读取 getter，切换语言不会再次保存或测试连接；返回普通字符串时按原文显示。
 
 `useSettingsDraft` 返回 `{ saving, save }`：
 
@@ -153,7 +157,6 @@ function ProfileSettings({ context, saved }: PluginSettingsProps & { saved: Prof
 ## 命令
 
 要把插件页面作为一条右栏命令，在 `run` 中调用 `await page.open({}, { placement: "dock" })` 并返回 `null`。注册和调用的完整示例见[在右栏打开页面和网页](pages.md#在右栏打开页面和网页)。
-
 
 命令是一个有名字的操作，开头例子里的「重置计数」就是一条命令：
 
