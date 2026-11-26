@@ -1,0 +1,12 @@
+{
+  "title": "Counter",
+  "settings": "Counter settings",
+  "open": "Open counter",
+  "loading": "Loading…",
+  "count": "Saved count: {{count}}",
+  "increment": "Increment and save",
+  "help": "Help",
+  "retry": "Reload",
+  "helpTitle": "Using the counter",
+  "helpBody": "The count is saved in this library and kept when the plugin is disabled."
+}

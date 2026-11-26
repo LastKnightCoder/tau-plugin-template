@@ -90,3 +90,68 @@ export function HelpButton() {
 建议在构建脚本里检查编译结果：Tailwind 产物里出现不带前缀的类选择器就报错，避免漏改的配置把通用类名发布出去。
 
 接下来读[页面与入口](pages.md)，把组件放进一个用户能打开的页面。
+
+
+## 界面语言
+
+为插件提供自己的词典，Tau 会自动传入当前界面语言。组件里的文案用 `t`，交给 Tau 显示的页面、命令和入口标题用 `messages.ref`；用户切换语言时两者都会更新。
+
+创建 `src/locales/zh-CN.json`、`src/locales/zh-TW.json` 和 `src/locales/en-US.json`，文件内容分别为：
+
+```json
+{ "title": "阅读列表", "empty": "还没有阅读记录" }
+```
+
+```json
+{ "title": "閱讀清單", "empty": "還沒有閱讀紀錄" }
+```
+
+```json
+{ "title": "Reading list", "empty": "No reading history yet" }
+```
+
+在入口导入这些文件：
+
+```tsx
+import zhCN from "./locales/zh-CN.json";
+import zhTW from "./locales/zh-TW.json";
+import enUS from "./locales/en-US.json";
+import { defineI18n, definePlugin, useI18n } from "@tau/plugins";
+
+declare const __PLUGIN_META__: { id: string; name: string; version: string };
+
+const messages = defineI18n({
+  fallbackLocale: "zh-CN",
+  resources: { "zh-CN": zhCN, "zh-TW": zhTW, "en-US": enUS },
+});
+
+function ReadingList() {
+  const { t } = useI18n(messages);
+  return <p>{t("empty")}</p>;
+}
+
+export default definePlugin({
+  ...__PLUGIN_META__,
+  i18n: messages,
+  create: () => ({
+    activate(context) {
+      const page = context.pages.register({
+        id: "reading", title: messages.ref("title"), component: ReadingList,
+      });
+      context.navigation.registerEntry({ id: "reading", title: messages.ref("title"), page });
+    },
+  }),
+});
+```
+
+- `resources` 是语言标签到已导入 JSON 文件的映射。文案放在独立文件中，TypeScript 只负责导入和注册。繁体中文可以使用 `zh-TW`；`zh-HK`、`zh-MO`、`zh-Hant` 会按繁体文字体系匹配。词典使用扁平的字符串 key，key 中的点是普通字符。
+- TypeScript 配置启用 `resolveJsonModule`；JSON 会随插件代码打包，用户不需要额外下载词典。
+- 词典由插件作者提供，至少包含 `fallbackLocale` 对应的非空词典。缺少用户所选语言或某条文案时，使用插件的默认语言。
+- 在文案中写 `{{name}}`，调用 `t("greeting", { name: "Tau" })` 传值。英文数量形式可写 `item_one` 和 `item_other`，调用 `t("item", { count: 2 })`。
+- 非 React 动作用 `context.i18n.t(key, values)`。在组件中使用 Hook，使文案随语言刷新；不要在模块顶层把译文存为常量。
+- 标题引用支持命令、页面、功能入口、侧栏、设置分区、首页面板及桌面窗口标题。已有字符串表示字面文案。
+- `Dialog`、`ConfirmDialog` 和 `Select` 的默认按钮与提示由 Tau 按界面语言提供。显式传入的文案优先使用，插件作者需自行调用 `t` 翻译这些自定义文案。
+- 静态编辑器组件同样可以使用 `useI18n(messages)`，无需 activate。插件不必安装翻译库或创建 Provider。
+- 文案按文本渲染，不传给 HTML 注入接口。已有笔记、用户自定义名称和协议字段保持原样。
+
+需要使用自己的翻译库时，通过 `usePluginEnvironment().locale` 读取语言，或在非 React 逻辑中使用 `context.environment.locale` 和 `context.environmentChanges.subscribe`。后者返回可手动 dispose 的订阅，也会在插件停用后自动回收。

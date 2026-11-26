@@ -1,0 +1,12 @@
+{
+  "title": "計數器",
+  "settings": "計數設定",
+  "open": "開啟計數器",
+  "loading": "正在讀取…",
+  "count": "已儲存計數：{{count}}",
+  "increment": "增加並儲存",
+  "help": "說明",
+  "retry": "重新讀取",
+  "helpTitle": "使用說明",
+  "helpBody": "計數儲存在目前資料庫，停用後保留。"
+}
