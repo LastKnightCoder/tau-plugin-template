@@ -47,6 +47,23 @@ context.mcp.register({
 | `tools`       | 本地工具列表（与 `transport` 二选一）     |
 | `transport`   | 外部服务器的连接方式（与 `tools` 二选一） |
 
+### 显示名称与语言
+
+MCP 的 `name` 和 `description` 可以使用插件词典的 `messages.ref()`，配置方式与其他界面标题相同。词典按语言放在独立 JSON 文件里，并在 `definePlugin({ i18n: messages })` 中声明。
+
+```ts
+context.mcp.register({
+  id: "notes",
+  name: messages.ref("mcp.name"),
+  description: messages.ref("mcp.description"),
+  transport: { type: "streamable-http", url: "https://example.com/mcp" },
+});
+```
+
+用户切换界面语言时，宿主更新显示名称和说明，保留已注册的工具、连接及正在编辑的传输配置。普通字符串仍按注册时的值显示。
+
+工具的 `name` 是调用标识，工具的 `description` 和 `inputSchema` 是实际提供给 AI 的定义，继续使用原始字符串与结构，不放界面词典引用。
+
 | 工具字段      | 说明                                                                                     |
 | ------------- | ---------------------------------------------------------------------------------------- |
 | `name`        | 工具名，同一个 MCP 内唯一，规则同[局部 ID](plugin-basics.md#id-规则)。不要自己加插件前缀 |
