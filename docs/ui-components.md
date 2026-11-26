@@ -152,6 +152,7 @@ export default definePlugin({
 - 非 React 动作用 `context.i18n.t(key, values)`。在组件中使用 Hook，使文案随语言刷新；不要在模块顶层把译文存为常量。
 - 标题引用支持命令、页面、功能入口、侧栏、设置分区、首页面板及桌面窗口标题。已有字符串表示字面文案。
 - `Dialog`、`ConfirmDialog` 和 `Select` 的默认按钮与提示由 Tau 按界面语言提供。显式传入的文案优先使用，插件作者需自行调用 `t` 翻译这些自定义文案。
+- 需要长时间显示的 `toast.loading` 可通过选项 `getMessage: () => context.i18n.t("loading")` 在展示时读取自己的词典；同时传入普通字符串作为创建时的内容快照。语言变化不会替换提示或重新计时，调用 `toast.resolve` / `toast.reject` 落定后不再读取载入文案。
 - 声明式提供方表单可以在配置中使用 `messages.ref()`，分组、字段和远程选项会随语言更新，保存值和请求不变；见[配置表单](/docs/providers/README.md#跟随界面语言)。
 - 静态编辑器组件同样可以使用 `useI18n(messages)`，无需 activate。插件不必安装翻译库或创建 Provider。
 - 文案按文本渲染，不传给 HTML 注入接口。已有笔记、用户自定义名称和协议字段保持原样。
