@@ -51,7 +51,7 @@ function Counter({ element }: EditorElementRenderProps<CounterElement>) {
           <BlockToolbarButton
             title="更多"
             icon={<MoreHorizontal size={15} />}
-            onClick={(event) => {
+            onClick={event => {
               const rect = event.currentTarget.getBoundingClientRect();
               openMenu({ x: rect.left, y: rect.bottom + 6 });
             }}
@@ -80,7 +80,7 @@ export const counterExtension = defineEditorExtension({
     {
       id: "yourname.counter.insert",
       title: "插入计数器",
-      run: (editor) =>
+      run: editor =>
         editor.insertNode({
           type: "yourname.counter",
           count: 0,
@@ -117,7 +117,7 @@ export const counterExtension = defineEditorExtension({
             count: 0,
             children: [{ type: "formatted", text: "" }],
           },
-          { at: path },
+          { at: path }
         );
         return true;
       },
@@ -178,18 +178,22 @@ export default definePlugin({
 
 `blockPanel` 的每一项会出现在用户输入 `/` 后弹出的菜单里：
 
-| 字段          | 说明                                         |
-| ------------- | -------------------------------------------- |
-| `icon`        | 图标组件，接收 `className`                   |
-| `title`       | 标题                                         |
-| `description` | 说明                                         |
-| `keywords`    | 搜索关键词，用户输入这些词时会匹配到这一项   |
-| `onClick`     | 选中时调用，收到当前编辑器，通常用来插入节点 |
-| `children`    | 可选。子菜单                                 |
+| 字段          | 说明                                                                |
+| ------------- | ------------------------------------------------------------------- |
+| `id`          | 可选。条目的稳定身份，使用插件命名空间，如 `example.counter.insert` |
+| `group`       | 可选。要并入的顶层条目 id，分组与标题和界面语言无关                 |
+| `icon`        | 图标组件，接收 `className`                                          |
+| `title`       | 标题                                                                |
+| `description` | 说明                                                                |
+| `keywords`    | 搜索关键词，用户输入这些词时会匹配到这一项                          |
+| `onClick`     | 选中时调用，收到当前编辑器，通常用来插入节点                        |
+| `children`    | 可选。子菜单                                                        |
 
 `onClick` 收到的 `editor` 提供 `insertNode`、`setNodes`、`removeNodes` 等编辑器方法。插入后需要立即编辑的源码类块，用 `insertSourceBlock`，见[源码预览块](editor-source-media.md#源码预览块)。
 
 `blockPanel` 也可以是一个函数 `(editor) => items`，每次打开菜单时求值。
+
+要把插入项放到内置「图片」菜单，把它的 `group` 配置为 `"tau.image"`。自己的分组可以先声明一个带 `id` 和 `children` 的父条目，再让其他条目的 `group` 指向它。父条目本身也有插入动作时，这个动作会保留为分组内的一个子项。分组目标未安装、id 重复或分组关系成环时，条目保持独立显示，不按标题猜测归属；重复 id 会记录诊断。未配置 `group` 的条目按原声明显示。
 
 ### 命令与快捷键
 
@@ -263,8 +267,11 @@ const marks = await context.textDecorations.register({
   getDecorations({ text, source }) {
     if (source.id === target.id) return [];
     return Array.from(text.matchAll(/回顾/g), hit => ({
-      start: hit.index, end: hit.index + hit[0].length,
-      appearance: "reference" as const, key: target.id, label: `打开文章《${target.title}》`,
+      start: hit.index,
+      end: hit.index + hit[0].length,
+      appearance: "reference" as const,
+      key: target.id,
+      label: `打开文章《${target.title}》`,
     }));
   },
   getPreview({ key }) {
@@ -278,14 +285,14 @@ const marks = await context.textDecorations.register({
 
 在 `sources` 里选择卡片（`card`）、文章（`article`）、项目文档（`document`），并声明各来源的读取权限。每个返回项用 `appearance` 选择外观，按打扰程度从低到高：
 
-| 外观 | 样子 | 适合 |
-| --- | --- | --- |
-| `dot` | 文字不变，末尾一个小圆点 | 极简、行距紧 |
-| `ghost` | 点线很淡，悬停或按住 ⌘/Ctrl 才显出 | 识别量很大、不想打扰阅读 |
-| `reference` | 正文色文字加点线，悬停变成实线 | 引用、跳转，推荐默认 |
-| `tint` | 只改字色 | 表格、密集文本 |
-| `marker` | 文字下沿的荧光笔底色，悬停铺满 | 想一眼扫出结果 |
-| `wavy` | 波浪下划线 | 提醒、待确认 |
+| 外观        | 样子                               | 适合                     |
+| ----------- | ---------------------------------- | ------------------------ |
+| `dot`       | 文字不变，末尾一个小圆点           | 极简、行距紧             |
+| `ghost`     | 点线很淡，悬停或按住 ⌘/Ctrl 才显出 | 识别量很大、不想打扰阅读 |
+| `reference` | 正文色文字加点线，悬停变成实线     | 引用、跳转，推荐默认     |
+| `tint`      | 只改字色                           | 表格、密集文本           |
+| `marker`    | 文字下沿的荧光笔底色，悬停铺满     | 想一眼扫出结果           |
+| `wavy`      | 波浪下划线                         | 提醒、待确认             |
 
 `dot`、`ghost`、`reference` 表示可以点击，必须提供字符串 `key` 和 `onActivate`，否则不显示。其余外观省略 `key` 即可只用于阅读。外观都用背景或伪元素绘制，用户自己加的下划线、删除线保持不变（`wavy` 除外）。
 
