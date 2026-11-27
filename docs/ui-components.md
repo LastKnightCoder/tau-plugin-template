@@ -194,7 +194,7 @@ export default definePlugin({
 
 ### 让进行中的提示跟随语言切换
 
-UI 0.7.0 的 `toast.loading` 接受 `getMessage`。第一个参数提供创建提示时的文字；回调在显示提示时读取插件当前的译文。用户在操作途中切换语言，提示会原位更新。给插件词典添加 `syncing`，例如简体中文写「正在同步」，英文写 “Syncing”。
+UI 0.7.1 的 `toast.loading` 可以直接接收返回字符串的函数。首次调用时保存初始文本，提示显示时再次读取当前译文。回调只负责读文案，启动同步等操作放在回调外。用户在操作途中切换语言，提示会原位更新。给插件词典添加 `syncing`，例如简体中文写「正在同步」，英文写 “Syncing”。
 
 ```ts
 import type { PluginContext } from "@tau/plugins";
@@ -202,7 +202,7 @@ import { toast } from "@tau/ui";
 
 export async function syncWithNotice(context: PluginContext, sync: () => Promise<void>) {
   const getMessage = () => context.i18n.t("syncing");
-  const id = toast.loading(getMessage(), { getMessage });
+  const id = toast.loading(getMessage);
   try {
     await sync();
     toast.resolve(id);
@@ -213,4 +213,6 @@ export async function syncWithNotice(context: PluginContext, sync: () => Promise
 }
 ```
 
-`resolve(id)` 和 `reject(id)` 会结束载入状态，分别使用 Tau 当前语言的完成或失败提示。需要自定义结果时，在操作结束时调用 `context.i18n.t(...)`，将译文作为第二个参数传入。UI 组件的运行实现随 Tau 客户端提供；若插件依赖在途换语，请在支持该功能的客户端验证，再填写最低客户端版本。
+`resolve(id)` 和 `reject(id)` 会结束载入状态，分别使用 Tau 当前语言的完成或失败提示。需要自定义结果时，在操作结束时调用 `context.i18n.t(...)`，将译文作为第二个参数传入。普通字符串仍保存创建时的文案。`toast.show`、`success`、`error`、`warning` 和 `info` 也接受函数消息。
+
+组件实现由 Tau 客户端提供。使用函数首参的插件应在支持它的客户端验证并声明相应的最低客户端版本。需要同时运行在只接受字符串首参的旧客户端时，可继续使用 0.7.0 的 `toast.loading(getMessage(), { getMessage })`；0.7.1 保留这项兼容。

@@ -124,13 +124,13 @@ git push origin v1.1.0
 
 ## 升级 SDK
 
-模板通过 npm 别名分别锁定 `@tau/plugins` 和 `@tau/ui`，可以单独升级。下面以插件 SDK 保持 0.63.0、UI 从 0.6.0 升到 0.7.0 为例。
+模板通过 npm 别名分别锁定 `@tau/plugins` 和 `@tau/ui`，可以单独升级。下面以插件 SDK 保持 0.63.0、UI 从 0.7.0 升到 0.7.1 为例。
 
-1. 在模板的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 清单里新增 `"@xiongtao.xt/tau-ui@0.7.0"`。保留已有条目，使 pnpm 能读取旧锁文件；第三方依赖继续使用原有的发布时间保护。
+1. 在模板的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 清单里新增 `"@xiongtao.xt/tau-ui@0.7.1"`。保留已有条目，使 pnpm 能读取旧锁文件；第三方依赖继续使用原有的发布时间保护。
 2. 在模板根目录运行以下命令。第一步同时更新 `package.json` 和 `pnpm-lock.yaml`，第二步核验锁文件可以直接安装。
 
 ```sh
-pnpm add --save-exact @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.0
+pnpm add --save-exact @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.1
 pnpm install --frozen-lockfile
 pnpm build
 ```
