@@ -124,42 +124,18 @@ git push origin v1.1.0
 
 ## 升级 SDK
 
-模板锁定了 `@tau/plugins` 和 `@tau/ui` 的精确版本，两个包一起升级。各版本的变化见已安装包中的 `node_modules/@tau/plugins/CHANGELOG.md`。下面以把 `@tau/plugins` 从 `0.55.0` 升到 `0.56.0`、`@tau/ui` 从 `0.6.0` 升到 `0.7.0` 为例，换成你实际的版本号。
+模板通过 npm 别名分别锁定 `@tau/plugins` 和 `@tau/ui`，可以单独升级。下面以插件 SDK 保持 0.63.0、UI 从 0.6.0 升到 0.7.0 为例。
 
-### 1. 允许安装新版本
-
-模板的 `pnpm-workspace.yaml` 启用了 pnpm 的发布时间保护，刚发布的包要等一段时间才能安装。把两个包的新版本加进 `minimumReleaseAgeExclude`，**旧版本的条目先留着**：
-
-```yaml
-minimumReleaseAgeExclude:
-  - "@xiongtao.xt/tau-plugins@0.55.0"
-  - "@xiongtao.xt/tau-ui@0.6.0"
-  - "@xiongtao.xt/tau-plugins@0.56.0"
-  - "@xiongtao.xt/tau-ui@0.7.0"
-```
-
-旧条目要等锁文件更新后再删。现在就删，pnpm 读到锁文件里的旧版本也会检查发布时间，报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`。只为你确认过的版本添加例外，不要关闭整个保护。
-
-### 2. 更新依赖并构建
+1. 在模板的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 清单里新增 `"@xiongtao.xt/tau-ui@0.7.0"`。保留已有条目，使 pnpm 能读取旧锁文件；第三方依赖继续使用原有的发布时间保护。
+2. 在模板根目录运行以下命令。第一步同时更新 `package.json` 和 `pnpm-lock.yaml`，第二步核验锁文件可以直接安装。
 
 ```sh
-pnpm add @tau/plugins@npm:@xiongtao.xt/tau-plugins@0.56.0 @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.0 --save-exact
+pnpm add --save-exact @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.0
+pnpm install --frozen-lockfile
 pnpm build
 ```
 
-`pnpm add` 会同时改写 `package.json` 和 `pnpm-lock.yaml`。构建失败时，按类型错误修改代码，React 保持模板锁定的版本：它由 Tau 提供，版本不一致可能导致插件无法运行。
-
-### 3. 删除旧条目
-
-构建通过后，从 `minimumReleaseAgeExclude` 中删掉两个旧版本的条目，只留新版本：
-
-```yaml
-minimumReleaseAgeExclude:
-  - "@xiongtao.xt/tau-plugins@0.56.0"
-  - "@xiongtao.xt/tau-ui@0.7.0"
-```
-
-再运行一次 `pnpm install --frozen-lockfile`，确认不报错（GitHub 上的发布工作流也是这样安装的）。然后提交 `package.json`、`pnpm-lock.yaml` 和 `pnpm-workspace.yaml`，并在 Tau 中重新验证一遍主要功能。
+3. 如果旧页面给侧栏传了 `fillRemaining`，按[侧栏迁移示例](ui-components.md#迁移-fillremaining)调整布局；进行中的同步或导入提示可以使用[动态译文](ui-components.md#让进行中的提示跟随语言切换)。提交上述三个依赖文件，并在目标 Tau 客户端验证插件用到的交互。
 
 ### 同步模板的更新
 

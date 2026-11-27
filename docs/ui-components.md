@@ -49,6 +49,40 @@ export function HelpButton() {
 
 `Dialog`、`Drawer`、`Popover`、`Select`、`Menu` 自己处理 Esc 和手机的系统返回键；自己画的浮层怎样接 Esc，见[页面显示状态与 Esc](pages.md#页面显示状态与-esc)。
 
+### 迁移 fillRemaining
+
+从 UI 0.6.0 升级到 0.7.0 时，搜索 `ResizableAndHideableSidebar` 的 `fillRemaining` 属性。按面板的用途迁移：
+
+- 原来省略或传 `false`：保留 `width`、`open` 和已有回调，删除显式的 `fillRemaining={false}` 即可。
+- 原来传 `true`，让内容占满剩余宽度：用普通容器承载这块内容，让父布局分配空间。横向 flex 容器中的内容区设置 `flex: 1` 和 `minWidth: 0`。如果有开合按钮，把按钮放在内容区外，用 `hidden={!open}` 控制内容区显隐，内部组件可继续保留状态。
+- 同一行既有可拖动侧栏又有弹性正文：侧栏继续用显式宽度，正文作为相邻的弹性容器。侧栏的宽度动画和拖动回调仍由组件负责。
+
+```tsx
+import { useState, type ReactNode } from "react";
+import { ResizableAndHideableSidebar } from "@tau/ui";
+
+export function SplitPane({ open, sidebar, content }: {
+  open: boolean;
+  sidebar: ReactNode;
+  content: ReactNode;
+}) {
+  const [width, setWidth] = useState(280);
+  return (
+    <div style={{ display: "flex", height: "100%" }}>
+      <ResizableAndHideableSidebar
+        open={open}
+        width={width}
+        onWidthChange={setWidth}
+        style={{ flexShrink: 0 }}
+      >
+        {sidebar}
+      </ResizableAndHideableSidebar>
+      <section style={{ flex: 1, minWidth: 0 }}>{content}</section>
+    </div>
+  );
+}
+```
+
 ### 自己写样式
 
 自己写的样式放在 CSS 文件里，在入口或组件中 `import`：
@@ -152,9 +186,31 @@ export default definePlugin({
 - 非 React 动作用 `context.i18n.t(key, values)`。在组件中使用 Hook，使文案随语言刷新；不要在模块顶层把译文存为常量。
 - 命令、页面、功能入口、侧栏菜单、设置分区、首页面板和桌面窗口标题都可以使用词典引用。注册上下文动作时可将 `messages.ref("action.title")` 传给 `context.actions.register` 的 `title`；桌面 Notebook 的 `context.notebooks.registerOutput` 也接受本地化的 `title` 和 `description`。注册 ID、产物数据及用户输入的文字保持原值。
 - `Dialog`、`ConfirmDialog` 和 `Select` 的默认按钮与提示由 Tau 按界面语言提供。显式传入的文案优先使用，插件作者需自行调用 `t` 翻译这些自定义文案。
-- 配合已发布的 `@tau/ui` 0.6.0 时，用 `toast.loading(context.i18n.t("loading"))` 显示当前语言的提示。任务完成时再读取当前语言的消息，调用 `toast.resolve` 或 `toast.reject` 更新同一条提示。
 - 声明式提供方表单可以在配置中使用 `messages.ref()`，分组、字段和远程选项会随语言更新，保存值和请求不变；见[配置表单](/docs/providers/README.md#跟随界面语言)。
 - 静态编辑器组件同样可以使用 `useI18n(messages)`，无需 activate。插件不必安装翻译库或创建 Provider。
 - 文案按文本渲染，不传给 HTML 注入接口。已有笔记、用户自定义名称和协议字段保持原样。
 
 需要使用自己的翻译库时，通过 `usePluginEnvironment().locale` 读取语言，或在非 React 逻辑中使用 `context.environment.locale` 和 `context.environmentChanges.subscribe`。后者返回可手动 dispose 的订阅，也会在插件停用后自动回收。
+
+### 让进行中的提示跟随语言切换
+
+UI 0.7.0 的 `toast.loading` 接受 `getMessage`。第一个参数提供创建提示时的文字；回调在显示提示时读取插件当前的译文。用户在操作途中切换语言，提示会原位更新。给插件词典添加 `syncing`，例如简体中文写「正在同步」，英文写 “Syncing”。
+
+```ts
+import type { PluginContext } from "@tau/plugins";
+import { toast } from "@tau/ui";
+
+export async function syncWithNotice(context: PluginContext, sync: () => Promise<void>) {
+  const getMessage = () => context.i18n.t("syncing");
+  const id = toast.loading(getMessage(), { getMessage });
+  try {
+    await sync();
+    toast.resolve(id);
+  } catch (error) {
+    toast.reject(id);
+    throw error;
+  }
+}
+```
+
+`resolve(id)` 和 `reject(id)` 会结束载入状态，分别使用 Tau 当前语言的完成或失败提示。需要自定义结果时，在操作结束时调用 `context.i18n.t(...)`，将译文作为第二个参数传入。UI 组件的运行实现随 Tau 客户端提供；若插件依赖在途换语，请在支持该功能的客户端验证，再填写最低客户端版本。
