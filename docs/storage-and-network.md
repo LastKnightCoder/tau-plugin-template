@@ -39,6 +39,18 @@ await context.storage.set("count", count + 1);
 - **兼顾新旧版本**。用户可以把插件恢复到上一版，但数据不会跟着回退。改变数据结构时，让新版本能读懂旧数据，也尽量让旧版本读到新数据时不出错（例如只新增字段，不改已有字段的含义）。
 - **不要存凭据**。账号、Token 这类配置会随资料库同步，不应放在这里。服务提供方的账号配置使用专门的配置保存接口，见[服务提供方](providers/README.md)。
 
+## 本机凭据
+
+使用 `context.secrets` 保存当前插件、当前工作区的 Token 或密码。它们保存在当前设备上，不随资料库同步。首次连接其他设备时需在那台设备上配置凭据。
+
+```ts
+await context.secrets.set("token", token);
+const saved = await context.secrets.get("token");
+await context.secrets.delete("token");
+```
+
+键与私有存储使用相同规则，值为字符串。键不存在时读取返回 `undefined`，删除不存在的键也会成功。系统决定是否要求认证；用户取消、系统拒绝或宿主没有系统安全存储时，调用失败。停用或重启后凭据保留，清除该插件在当前资料库的数据时一并删除。服务提供方的账号配置仍使用对应的配置接口。
+
 ## 网络请求
 
 用 `context.fetch` 发起网络请求。它的参数和返回值与标准的 `fetch` 相同：

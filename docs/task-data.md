@@ -115,6 +115,7 @@ async function loadReviews(context: PluginContext, listId: string) {
 | `view` | tasks（默认）返回普通任务或重复系列；occurrences 返回重复任务的每一次，必须给 start、end |
 | `listId`、`archived`、`completed` | 按待办项目、归档和完成状态筛选；archived 默认 false |
 | `keyword` | 按关键词筛选 |
+| `parentId` | 只列出该独立待办的直接子项，支持分页 |
 | `start`、`end` | YYYY-MM-DD 的日期窗口，须同时提供，窗口不超过 366 天 |
 | `limit`、`cursor` | 每页 1 至 100 项，默认 50；cursor 原样传回 |
 
@@ -125,6 +126,8 @@ calendar.query 的 display 视图需要 start、end；stored 视图可以省略�
 | 对象字段 | 含义 |
 | --- | --- |
 | 待办 `listId`、`reminders` | 所属待办项目和提醒；没有归属时 listId 为 null |
+| 独立待办 `startAt`、`parentId`、`descriptionRef` | 开始时刻（ISO 时间）、父待办 ID、描述正文引用；未设置时为 null。周期实例读取系列上的值；正文待办不提供这三个字段的值 |
+| 待办 `completedAt` | 普通独立待办的实际完成时刻（Unix 毫秒）；未完成或历史记录缺少时间时为 null。正文待办、重复系列和实例的此字段也为 null，实例完成时刻见 `occurrence.state.completedAt` |
 | 待办 `source?` | 正文勾选项所在的卡片、文章、项目文档或日记 |
 | 待办 `recurrence` | 分段重复规则；没有配置时为 null，停止后保留历史分段 |
 | 实例 `occurrence` | taskId、seriesId、originalDate 和 state；originalDate 是原始日期 |
@@ -154,7 +157,51 @@ async function createReviewTask(
 
 requestId 在调用前保存；重试复用，不能每次生成新值。同一插件、同一资料库、同一请求与输入返回原对象的当前值；更换输入会拒绝。原结果被删除或撤销后，旧请求不会再创建对象。它保护 Tau 侧创建，不包含外部网络事务或多台设备同时执行的互斥。
 
-todos.update 可修改 title、dueAt、listId、reminders。省略字段保持原值，dueAt: null 清除截止日期，reminders: [] 清空提醒。普通任务的完成状态用 setCompleted；删除用 delete，有子待办时会拒绝。修改与删除都要传 expectedRevision，冲突处理见[读写用户数据](user-data.md#用-revision-避免覆盖别人的修改)。
+todos.update 可修改 title、dueAt、listId、reminders。独立待办还可修改 startAt 和 parentId。省略字段保持原值，dueAt: null 清除截止日期，reminders: [] 清空提醒。普通任务的完成状态用 setCompleted；删除用 delete，有子待办时会拒绝。修改与删除都要传 expectedRevision，冲突处理见[读写用户数据](user-data.md#用-revision-避免覆盖别人的修改)。
+
+普通独立待办（含截止待办）可以回写外部服务记录的完成时刻。例如用户昨晚完成任务、今天才同步：
+
+```ts
+await context.data.todos.setCompleted(task.id, true, {
+  expectedRevision: task.revision,
+  completedAt: Date.parse("2026-11-25T20:00:00+08:00"),
+});
+```
+
+省略 `completedAt` 时，首次完成使用当前时刻，重复完成保留原值。父项首次完成会同时完成未完成的普通子项；外部时刻只写入父项，这次新完成的子项记当前时刻，先前已完成的子项保留各自的时间。父项已经完成时，可以用最新 revision 校正它的时刻，子项的状态和时间均保留。取消完成沿用原有级联规则，并清空完成时间，此时不要传 `completedAt`。历史记录的完成状态以 `completed` 为准。
+
+### 描述、开始时间和子任务
+
+为已有独立待办创建子项时传 `parentId`。省略 `listId` 会继承父项的清单；同时传入两者时，它们必须属于同一清单。
+
+```ts
+const child = await context.data.todos.create({
+  title: "准备演示材料",
+  parentId: parent.id,
+  startAt: "2026-12-04T09:00:00+08:00",
+  description: { markdown: "确认议程和参会名单。" },
+}, { requestId });
+
+const children = await context.data.todos.query({ parentId: parent.id });
+```
+
+`startAt` 可传带时区的 ISO 时间，或以本地零点为开始的 YYYY-MM-DD；读回为 ISO 时间。更新时传 null 清除，省略则保留。移动已有子项用 `todos.update(id, { parentId }, { expectedRevision })`。传 null 可移到清单顶层，跨清单移动时子树随父项一起移动。宿主会拒绝把待办移到自身或自己的后代下。
+
+描述与界面上的描述共用富文本正文。已有描述用 `descriptionRef` 调用 `context.content.read/edit`。需要给空白待办补写描述时，用 `todos.ensureDescription(id, { expectedRevision })` 取得引用，再用正文自己的 revision 编辑：
+
+```ts
+const task = child.descriptionRef ? child : await context.data.todos.ensureDescription(
+  child.id, { expectedRevision: child.revision },
+);
+if (task.descriptionRef) {
+  const body = await context.content.read(task.descriptionRef);
+  if (body) await context.content.edit(task.descriptionRef, {
+    op: "append", content: { markdown: "补充：附上演示链接。" },
+  }, { expectedRevision: body.revision });
+}
+```
+
+读取、修改描述沿用 `todos:read`、`todos:write`。描述编辑也会进入待办变化流；后续修改待办前重新获取 revision。
 
 ### 提醒的两种写法
 
@@ -162,12 +209,12 @@ todos.update 可修改 title、dueAt、listId、reminders。省略字段保持�
 
 | 来源 | 提醒写法 | 限制 |
 | --- | --- | --- |
-| 普通独立待办 | `[{ offsetMs: 300000 }]` | 最多三条，需要截止时间 |
+| 普通独立待办 | `[{ offsetMs: 300000 }]` | 可设置多个偏移，需要截止时间 |
 | 重复独立待办 | `[{ offsetMs: -32400000 }]` | 一条，以实例所在日零点为基准，限定当日偏移 |
 | 普通正文待办 | `[{ at: "2026-12-04T09:00:00+08:00" }]` | 一条，无截止日期也能设置；改截止日期不会移动此提醒 |
 | 重复正文待办 | `[{ offsetMs: -32400000 }]` | 一条，以实例所在日零点为基准，限定当日偏移 |
-| 定时日程 | `[{ offsetMs: 300000 }]` | 最多三条，以开始时刻为基准 |
-| 全天日程 | `[{ offsetMs: -32400000 }]` | 最多三条，以当天零点为基准 |
+| 定时日程 | `[{ offsetMs: 300000 }]` | 可设置多个偏移，以开始时刻为基准 |
+| 全天日程 | `[{ offsetMs: -32400000 }]` | 可设置多个偏移，以当天零点为基准 |
 
 当日偏移可表示零点到当天末尾；跨日、无法无歧义表达的夏令时情况会拒绝，不截断或取模。日程只接受 offsetMs。已有重复独立待办的追加提醒会完整读出，写入不能无声删去它们。
 

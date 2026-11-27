@@ -32,6 +32,8 @@
 | `pages`、`navigation`                                          | ✓    | ✓             | 桌面的功能入口在侧边栏，手机在「我的」顶部功能宫格，见[页面与入口](pages.md)                                              |
 | 页面右栏、`app.openWeb`                                        | ✓    |               | 主窗口用户操作可打开停靠页面或 HTTP(S) 网页，见[在右栏打开页面和网页](pages.md#在右栏打开页面和网页)                      |
 | `windows`                                                      | ✓    |               | 独立窗口、自动外观与同插件跨窗口通信，见[桌面插件窗口](windows.md)                                                        |
+| `secrets`                                                      | ✓    | ✓             | 本机系统凭据，仅原生客户端可用。                                                                                          |
+| `i18n`、`environmentChanges`                                   | ✓    | ✓             | 读取插件翻译、订阅环境变化。                                                                                                      |
 | `settings`、`storage`、`fetch`、`websocket`                    | ✓    | ✓             |                                                                                                                           |
 | `environment`、`register`、`signal`、`pluginId`、`workspaceId` | ✓    | ✓             |                                                                                                                           |
 | `commands`                                                     | ✓    | 部分          | 手机上可以注册，但没有命令面板，用户找不到；主要功能要另外注册功能入口                                                    |
