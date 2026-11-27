@@ -99,7 +99,7 @@ export default definePlugin({
 - `delete` 不会弹出确认，需要确认时由插件自己询问用户。删除后，用户可以在插件详情页的「最近删除」中 7 天内恢复，恢复后 ID、`key` 和正文都不变；如果这期间插件用同一个 `key` 新建了内容，则无法恢复。
 - `backlinks` 返回 `{ items: [{ ref, title, snippets }], omitted }`。它只列出插件已获准读取的类型（如有 `cards:read` 才列出卡片），不会弹窗询问，其余来源只计入 `omitted`。`ref` 可以直接交给 `context.app.open`。
 - 变化时发 `entity.created`、`entity.updated`、`entity.deleted` 事件，只发给本插件，见[订阅变化](user-data.md#订阅变化)。
-- 桌面卸载插件后，它创建的内容保留 7 天，期间重新安装就能找回，超过 7 天后删除。手机上卸载不删除这些内容（它们可能还在其他设备上使用），重新安装后直接接着用。
+- 桌面和手机卸载插件时默认保留插件内容，在同一资料库重装相同 ID 的插件后可以继续使用。用户也可以在卸载时选择删除当前资料库中的插件数据，删除会随资料库同步。
 
 ### 按字段查询
 
@@ -196,7 +196,7 @@ await context.records.update(
 - 每条记录是 `{ id, collection, data, createdAt, updatedAt, revision }`。`data` 是不超过 64 KB 的 JSON 对象。
 - `indexes`、`where`、`orderBy` 的写法与[按字段查询](#按字段查询)相同，字段取 `data` 的顶层键；自带的排序列是 `createdAt` 和 `updatedAt`。
 - 删除是直接删除，**不进「最近删除」**，用户无法恢复。删除插件内容时，与它相关的记录由插件自己删除，可以放进同一个[原子提交](#原子提交)。
-- 记录随资料库保存与同步。卸载插件后的保留规则和插件内容相同：桌面保留 7 天，手机不删除。
+- 记录随资料库保存与同步。卸载插件时默认长期保留，用户勾选清除插件数据时才会删除当前资料库中该插件的记录。
 - 变化时发 `record.created`、`record.updated`、`record.deleted` 事件，事件带 `collection`，只发给本插件，见[订阅变化](user-data.md#订阅变化)。
 - 设置、进度这类按键存取的小块数据，用[私有存储](storage-and-network.md#私有存储)更简单。
 

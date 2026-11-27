@@ -60,7 +60,7 @@ async function createReviewTargets(context: PluginContext, requestId: string) {
 }
 ```
 
-调用前保存 requestId，重试复用；两次创建各自提交，第一次成功、第二次失败时也能继续。将返回 ID 与外部目录的稳定身份保存到 context.records，再用 listId/calendarId 创建待办和日程。名称可以重复，不按同名自动认领或合并用户目录。
+调用前保存 requestId，重试复用；两次创建各自提交，第一次成功、第二次失败时也能继续。将返回的 ID 与外部目录 ID 的对应关系保存为映射记录，再用 listId/calendarId 创建待办和日程。名称可以重复，不按同名自动认领或合并用户目录。
 
 | 方法 | 字段 | 权限 |
 | --- | --- | --- |
@@ -428,7 +428,8 @@ async function consumeTaskChanges(
 
 - 返回身份，不返回历史内容。同一身份可能重复，get 可以看到更新的状态。历史删除也可能已恢复，删除外部对象前同样用 get 复验；get 为 null 才按不存在处理。
 - 全量包含已完成、归档和无截止日对象，不包含虚拟日历标记。不按日期、待办项目或完成状态过滤，避免移出筛选范围的对象悄悄消失。
-- 发生冲突或外部调用失败时，不推进游标。映射与处理结果适合存入 records，保存方式见[插件记录](plugin-content.md#插件记录)。
+- 双向同步时，建议用 `context.records` 把 Tau ID 和外部 ID 存在同一条记录里，两个方向都可以按字段查询。只需按已知键读取的映射和同步游标可用 [私有存储](storage-and-network.md#私有存储)。两种存储在卸载时都默认保留。
+- 发生冲突或外部调用失败时，不推进游标。需要按字段查询的处理记录可以存入 `context.records`，保存与清理规则见[插件记录](plugin-content.md#插件记录)。
 - 示例不根据「本轮没出现」删除已有对象。需要缺失对账时，把本轮出现的身份集合也一起保存，等全量和补查成功结束再比较；恢复半轮游标时也要恢复这份集合。
 - 换资料库、换设备、授权或查询范围变化、历史过期、游标损坏会抛 PluginSyncResetRequiredError。保留映射，丢弃游标，再完整读取；protocol-changed 需要先核对客户端支持，见[多端适配](portability.md#待办与日程接口)。
 - 在插件启动、恢复前台以及收到 todo.* / event.* / todo-list.* / calendar.* 的对象事件时续读。订阅时列出完整事件名，例如 todo-list.updated；每条通知带对应 get 使用的 ID。事件用来唤醒读取，不承担离线历史，也不保证每次变化只通知一次。订阅方式见[订阅变化](user-data.md#订阅变化)。
