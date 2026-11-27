@@ -127,6 +127,7 @@ calendar.query 的 display 视图需要 start、end；stored 视图可以省略�
 | --- | --- |
 | 待办 `listId`、`reminders` | 所属待办项目和提醒；没有归属时 listId 为 null |
 | 独立待办 `startAt`、`parentId`、`descriptionRef` | 开始时刻（ISO 时间）、父待办 ID、描述正文引用；未设置时为 null。周期实例读取系列上的值；正文待办不提供这三个字段的值 |
+| 独立待办 `priority`、`tags` | 优先级为 `none`、`low`、`medium` 或 `high`，标签为文本数组。周期实例读取系列上的值，正文勾选项的两个字段均为 null |
 | 待办 `completedAt` | 普通独立待办的实际完成时刻（Unix 毫秒）；未完成或历史记录缺少时间时为 null。正文待办、重复系列和实例的此字段也为 null，实例完成时刻见 `occurrence.state.completedAt` |
 | 待办 `source?` | 正文勾选项所在的卡片、文章、项目文档或日记 |
 | 待办 `recurrence` | 分段重复规则；没有配置时为 null，停止后保留历史分段 |
@@ -157,7 +158,9 @@ async function createReviewTask(
 
 requestId 在调用前保存；重试复用，不能每次生成新值。同一插件、同一资料库、同一请求与输入返回原对象的当前值；更换输入会拒绝。原结果被删除或撤销后，旧请求不会再创建对象。它保护 Tau 侧创建，不包含外部网络事务或多台设备同时执行的互斥。
 
-todos.update 可修改 title、dueAt、listId、reminders。独立待办还可修改 startAt 和 parentId。省略字段保持原值，dueAt: null 清除截止日期，reminders: [] 清空提醒。普通任务的完成状态用 setCompleted；删除用 delete，有子待办时会拒绝。修改与删除都要传 expectedRevision，冲突处理见[读写用户数据](user-data.md#用-revision-避免覆盖别人的修改)。
+todos.update 可修改 title、dueAt、listId、reminders。独立待办还可修改 startAt、parentId、priority 和 tags。省略字段保持原值，dueAt: null 清除截止日期，reminders: [] 清空提醒。普通任务的完成状态用 setCompleted；删除用 delete，有子待办时会拒绝。修改与删除都要传 expectedRevision，冲突处理见[读写用户数据](user-data.md#用-revision-避免覆盖别人的修改)。
+
+创建或更新独立待办时，可传 `{ priority: "high", tags: ["工作", "评审"] }`。标签按传入顺序替换旧列表，两端空白、空标签和重复项会被移除。传 `tags: []` 清空标签，传 `priority: "none"` 清除优先级。修改周期待办时使用系列 ID。
 
 普通独立待办（含截止待办）可以回写外部服务记录的完成时刻。例如用户昨晚完成任务、今天才同步：
 
