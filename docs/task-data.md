@@ -354,6 +354,8 @@ async function createReviewEvent(
 
 calendar.update 可修改 title、start、end、allDay、calendarId、reminders。定时日程用带时区的 ISO 时间，精确到分钟；全天日程用 YYYY-MM-DD，end 不包含当天，例如当天全天的 end 是次日。
 
+独立定时日程可以在 create 或 update 时分别传入 `startTimeZone` 和 `endTimeZone`，例如 `America/New_York`。起止时间仍用带偏移的 ISO 时间指定实际时刻；时区名称随日程原样读回。新建时省略时区，默认使用设备时区；只指定开始时区，结束默认沿用它。只改标题、备注或提醒会保留原时区。历史日程可能没有时区字段，全天日程使用日期。依赖时区往返的插件写入前检查 `context.data.calendar.supportsTimeZones === true`，旧宿主需要升级。
+
 编辑已有备注用 notesRef。如果还没有备注，ensureNotes 显式建立空正文，读取日程本身不会创建备注：
 
 ```ts
