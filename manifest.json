@@ -9,6 +9,29 @@
     "计数",
     "打卡"
   ],
+  "locales": [
+    "zh-CN",
+    "zh-TW",
+    "en-US"
+  ],
+  "i18n": {
+    "zh-TW": {
+      "name": "計數器範例",
+      "description": "在功能入口中記錄並儲存計數。",
+      "keywords": [
+        "計數",
+        "打卡"
+      ]
+    },
+    "en-US": {
+      "name": "Counter Example",
+      "description": "Track and save a counter from a dedicated feature entry.",
+      "keywords": [
+        "counter",
+        "check-in"
+      ]
+    }
+  },
   "version": "1.2.4",
   "targets": {
     "desktop": {
