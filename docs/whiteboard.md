@@ -171,6 +171,8 @@ interaction: {
 
 ### 显示名称
 
+扩展的显示名需要随语言切换时，可以在传给 `defineWhiteboardExtension` 的对象上声明 `get name()`，在读取时返回当前语言的字符串。扩展 `id` 和元素 `type` 使用稳定标识。
+
 `presentation.getName(element)` 返回元素在列表中显示的名称，例如便签显示它的文字。用户手动起的名字优先；返回空时显示 `label`。
 
 ### 数据版本
@@ -389,6 +391,7 @@ export function StickyEditor({
 
 - `binding.getSnapshot()` 读取 `{ value, revision }`，`binding.subscribe(listener)` 监听变化，`binding.edit({ offset, remove, text, revision })` 按位置修改。
 - 在组件里取一次句柄并复用，卸载时调用 `dispose`。页面隐藏后组件的 effect 会清理，句柄随之失效，再次显示时重新取。
+- 创建元素的拖动预览中，`api.readonly` 为 true。预览的文本句柄支持读取和订阅，写入会被拒绝；预览结束后释放句柄，在正式元素的上下文中重新获取。
 - 修改时带上读取时的 `revision`。版本过期或文档变成只读时，修改会被拒绝；这时保留用户的输入，不要读取新值后直接覆盖。
 
 ### 异步操作
