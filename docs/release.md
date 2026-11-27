@@ -8,13 +8,13 @@
 
 插件中心和 Tau 中的插件详情页，内容都来自插件包本身，不需要在网站上另外填写：
 
-| 显示的内容       | 来自                                                              |
-| ---------------- | ----------------------------------------------------------------- |
-| 名称、简介、版本 | `manifest.json` 的 `name`、`description`、`version`               |
-| 分类、搜索关键词 | `manifest.json` 的 `categories`、`keywords`                       |
-| 多语言资料（可选） | `manifest.json` 的 `i18n` 与 `locales`                          |
-| 「说明」         | `README.md`（可选提供 `README.<locale>.md` 如 `README.en-US.md`） |
-| 「更新日志」     | `CHANGELOG.md`                                                    |
+| 显示的内容         | 来自                                                              |
+| ------------------ | ----------------------------------------------------------------- |
+| 名称、简介、版本   | `manifest.json` 的 `name`、`description`、`version`               |
+| 分类、搜索关键词   | `manifest.json` 的 `categories`、`keywords`                       |
+| 多语言资料（可选） | `manifest.json` 的 `i18n` 与 `locales`                            |
+| 「说明」           | `README.md`（可选提供 `README.<locale>.md` 如 `README.en-US.md`） |
+| 「更新日志」       | `CHANGELOG.md`                                                    |
 
 ### 多语言简介与说明（可选）
 
@@ -124,18 +124,18 @@ git push origin v1.1.0
 
 ## 升级 SDK
 
-模板通过 npm 别名分别锁定 `@tau/plugins` 和 `@tau/ui`，可以单独升级。下面以插件 SDK 保持 0.63.0、UI 从 0.7.0 升到 0.7.1 为例。
+模板通过 npm 别名分别锁定 `@tau/plugins` 和 `@tau/ui`，可以单独升级。下面以插件 SDK 升到 0.64.0、UI 保持 0.7.1 为例。
 
-1. 在模板的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 清单里新增 `"@xiongtao.xt/tau-ui@0.7.1"`。保留已有条目，使 pnpm 能读取旧锁文件；第三方依赖继续使用原有的发布时间保护。
+1. 在模板的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 清单里新增 `"@xiongtao.xt/tau-plugins@0.64.0"`。保留已有条目，使 pnpm 能读取旧锁文件；第三方依赖继续使用原有的发布时间保护。
 2. 在模板根目录运行以下命令。第一步同时更新 `package.json` 和 `pnpm-lock.yaml`，第二步核验锁文件可以直接安装。
 
 ```sh
-pnpm add --save-exact @tau/ui@npm:@xiongtao.xt/tau-ui@0.7.1
+pnpm add --save-exact @tau/plugins@npm:@xiongtao.xt/tau-plugins@0.64.0
 pnpm install --frozen-lockfile
 pnpm build
 ```
 
-3. 如果旧页面给侧栏传了 `fillRemaining`，按[侧栏迁移示例](ui-components.md#迁移-fillremaining)调整布局；进行中的同步或导入提示可以使用[动态译文](ui-components.md#让进行中的提示跟随语言切换)。提交上述三个依赖文件，并在目标 Tau 客户端验证插件用到的交互。
+3. 使用通知的 `isOnSurface` 时，按[通知说明](notifications-and-voice.md#用户正在查看结果时不打扰)登记实际可见面，并将桌面 `minAppVersion` 提高到 `0.68.0`。只升级类型依赖、未使用新增能力时，不需要提高客户端最低版本；通知仍只在桌面可用。提交依赖与锁文件，以及实际修改的 manifest，并在目标 Tau 客户端验证插件用到的交互。
 
 ### 同步模板的更新
 

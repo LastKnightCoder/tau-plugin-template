@@ -42,15 +42,50 @@ export default definePlugin({
 | `actions`     | 可选。最多两个按钮，其中最多一个主按钮                                                              |
 | `isOnSurface` | 可选。同步返回用户是否正在查看任务结果；`auto` 模式由宿主结合窗口焦点与设置覆盖状态决定是否抑制通知 |
 
-| `mode`         | 出现的位置                                             |
-| -------------- | ------------------------------------------------------ |
-| `auto`（默认） | Tau 窗口在前台时显示在窗口内，否则显示在独立的通知窗口 |
-| `in-app`       | 总是显示在窗口内                                       |
-| `system`       | 总是显示在独立的通知窗口                               |
+| `mode`         | 出现的位置                                                                     |
+| -------------- | ------------------------------------------------------------------------------ |
+| `auto`（默认） | 窗口聚焦且任务结果可见时抑制；聚焦离页时显示在窗口内，失焦时显示在独立通知窗口 |
+| `in-app`       | 总是显示在窗口内                                                               |
+| `system`       | 总是显示在独立的通知窗口                                                       |
 
 - 通知的来源固定显示为你的插件名称。
 - 发送通知不需要权限，也不需要用户操作触发，适合在异步任务完成时提醒用户。返回句柄表示宿主已经接受通知，不代表用户已经看到；目标可见时通知可能被抑制。
 - 通知只在桌面，手机上调用 `send` 会抛错；两端都运行的插件在手机上把结果显示在页面里，见[多端适配](portability.md#各平台可用的接口)。
+
+### 用户正在查看结果时不打扰
+
+`isOnSurface` 需要插件 SDK 0.64.0 和 Tau 桌面端 0.68.0；使用它的插件在 manifest 中把桌面 `minAppVersion` 设为 `0.68.0` 或更高。它不改变手机的接口支持范围，也不要求提高移动端最低版本。
+
+回调在发送时同步执行，读取当前可见状态。只判断对应任务的内容是否可见，窗口焦点与设置浮层交给 Tau 判断。省略回调时，`auto` 仍按窗口焦点选择通知位置；显式的 `in-app` / `system` 不使用可见面抑制。
+
+页面可能保留挂载，或同时出现在完整页和右栏。用 Effect 登记每一个可见实例，参数变化、隐藏或卸载时清理；仅靠 CSS 隐藏的标签页还需传入实际的 `visible` 状态。不要用“组件曾挂载”或任务开始时的页面参数判断可见性：
+
+```tsx
+import { useEffect } from "react";
+import type { PluginContext } from "@tau/plugins";
+
+const visibleReports = new Set<{ id: string }>();
+
+export function useReportSurface(id: string, visible: boolean) {
+  useEffect(() => {
+    if (!visible) return;
+    const surface = { id };
+    visibleReports.add(surface);
+    return () => {
+      visibleReports.delete(surface);
+    };
+  }, [id, visible]);
+}
+
+export function announceReport(context: PluginContext, id: string) {
+  return context.notifications.send({
+    title: "扫描完成",
+    isOnSurface: () => [...visibleReports].some(surface => surface.id === id),
+  });
+}
+```
+
+需要用户处理的通知使用 `sticky: true`，并保留 `send` 返回的句柄。用户在页面完成处理、任务取消或目标删除后，调用 `dispose()` 撤销；同一次失败不要再同时发送另一条通知或页面弹出提示。用户主动取消的任务不发送失败通知。
 
 ### 带按钮的通知
 
