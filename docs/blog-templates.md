@@ -171,6 +171,26 @@ function Tagline({ manifest }: { manifest: DataManifest }) {
 }
 ```
 
+### 翻译站点设置字段
+
+要让字段名称随 Tau 的界面语言切换，在发行清单的 `template` 对象中声明 `i18n` 和 `siteFields`。下面的片段可加到前面的清单示例中；使用词典时，`targets.desktop.minAppVersion` 至少填 `0.68.0`。
+
+```json
+{
+  "i18n": {
+    "fallbackLocale": "zh-CN",
+    "resources": { "zh-CN": "locales/zh-CN.json", "en-US": "locales/en-US.json" }
+  },
+  "siteFields": [
+    { "key": "tagline", "type": "text", "label": { "kind": "i18n", "key": "field.tagline" } }
+  ]
+}
+```
+
+当 `template.root` 为 `site` 时，将 `{ "field.tagline": "副标题" }` 写进 `site/locales/zh-CN.json`，将 `{ "field.tagline": "Tagline" }` 写进对应的英文文件。把两个文件放进 ZIP，并在清单的 `integrity` 中分别登记含 `site/` 前缀的路径及摘要。默认语言词典须包含用到的消息键。
+
+字段的 `label`、`description`、`placeholder` 和选项的 `label` 都可引用词典。字段的 `key`、选项的 `value` 以及用户填写的值保持稳定。要翻译插件中心展示的模板名称与简介，请填写[清单顶层的多语言资料](release.md#多语言简介与说明可选)。
+
 ## 渲染正文与样式
 
 用 `@tau/blog`（npm 包 `@xiongtao.xt/tau-blog`）的 `ContentRenderer` 显示正文。Tau 能发布的内容它都能显示，包括插件提供的编辑器块、网页嵌入、音视频、用户设置的图片外观和高亮笔触；模板只需要提供 `hrefFor`，把内容引用转成你的页面地址。

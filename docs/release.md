@@ -8,12 +8,41 @@
 
 插件中心和 Tau 中的插件详情页，内容都来自插件包本身，不需要在网站上另外填写：
 
-| 显示的内容       | 来自                                                |
-| ---------------- | --------------------------------------------------- |
-| 名称、简介、版本 | `manifest.json` 的 `name`、`description`、`version` |
-| 分类、搜索关键词 | `manifest.json` 的 `categories`、`keywords`         |
-| 「说明」         | `README.md`                                         |
-| 「更新日志」     | `CHANGELOG.md`                                      |
+| 显示的内容       | 来自                                                              |
+| ---------------- | ----------------------------------------------------------------- |
+| 名称、简介、版本 | `manifest.json` 的 `name`、`description`、`version`               |
+| 分类、搜索关键词 | `manifest.json` 的 `categories`、`keywords`                       |
+| 多语言资料（可选） | `manifest.json` 的 `i18n` 与 `locales`                          |
+| 「说明」         | `README.md`（可选提供 `README.<locale>.md` 如 `README.en-US.md`） |
+| 「更新日志」     | `CHANGELOG.md`                                                    |
+
+### 多语言简介与说明（可选）
+
+如果插件面向多种界面语言的用户，可以在 `manifest.json` 中补充可选的 `i18n`（按语言覆写简介、名称或搜索关键词）与 `locales`（声明插件支持的语言，详情页有值时展示），并在仓库根目录放置 `README.<locale>.md`（如 `README.en-US.md`、`README.zh-TW.md`）：
+
+```json
+{
+  "name": "计数器示例",
+  "description": "在功能入口中记录并保存计数。",
+  "keywords": ["计数"],
+  "locales": ["zh-CN", "zh-TW", "en-US"],
+  "i18n": {
+    "en-US": {
+      "name": "Counter Example",
+      "description": "Track and save counts from a feature page.",
+      "keywords": ["counter"]
+    },
+    "zh-TW": {
+      "name": "計數器範例",
+      "description": "在功能入口中記錄並儲存計數。"
+    }
+  }
+}
+```
+
+- 所有多语言字段和文件均为可选；顶层的 `name`、`description` 与 `README.md` 仍是默认回退。
+- 客户端会根据当前界面语言自动匹配，未命中时回退默认文案和 `README.md`；搜索同时匹配所有已填写语言的关键词、名称与简介。
+- 构建后检查 ZIP 根目录中有默认说明和各语言文件。使用自定义构建脚本时，可从 `@tau/plugins/package` 导入 `parseLocalizedReadmeFilename` 识别文件名。旧客户端可显示默认资料；依赖翻译展示时，用支持该能力的客户端验证声明的最低版本。
 
 ### README：写给使用者
 
