@@ -214,5 +214,3 @@ export async function syncWithNotice(context: PluginContext, sync: () => Promise
 ```
 
 `resolve(id)` 和 `reject(id)` 会结束载入状态，分别使用 Tau 当前语言的完成或失败提示。需要自定义结果时，在操作结束时调用 `context.i18n.t(...)`，将译文作为第二个参数传入。普通字符串仍保存创建时的文案。`toast.show`、`success`、`error`、`warning` 和 `info` 也接受函数消息。
-
-组件实现由 Tau 客户端提供。使用函数首参的插件应在支持它的客户端验证并声明相应的最低客户端版本。需要同时运行在只接受字符串首参的旧客户端时，可继续使用 0.7.0 的 `toast.loading(getMessage(), { getMessage })`；0.7.1 保留这项兼容。
